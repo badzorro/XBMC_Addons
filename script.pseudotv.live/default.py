@@ -74,7 +74,6 @@ def PseudoTV():
     
 # Adapting a solution from ronie (http://forum.xbmc.org/showthread.php?t=97353)
 if xbmcgui.Window(10000).getProperty("PseudoTVRunning") != "True":
-    xbmcgui.Window(10000).setProperty("PseudoTVRunning", "True")
     ShouldRestart = False
 
     if ShouldRestart == False: 
@@ -160,6 +159,7 @@ if xbmcgui.Window(10000).getProperty("PseudoTVRunning") != "True":
                 xbmc.executebuiltin("Notification( %s, %s, %d, %s)" % ("PseudoTV Live", "System Cache Cleared", 1000, THUMB) )
 
             #Start PseudoTV
+            xbmcgui.Window(10000).setProperty("PseudoTVRunning", "True")
             PseudoTV()
 else:
     log('script.pseudotv.live - Already running, exiting', xbmc.LOGERROR)
