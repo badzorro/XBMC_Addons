@@ -499,8 +499,12 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
 
         if REAL_SETTINGS.getSetting('INTRO_PLAYED') != 'true':     
             self.background.setVisible(False)
-            self.Player.play(self.channelList.youtube_ok + 'Y8WlAhpHzkM')
-            time.sleep(17) 
+            youtube_plugin = self.channelList.youtube_player
+            
+            if youtube_plugin != False:
+                self.Player.play(youtube_plugin + 'Y8WlAhpHzkM')
+                time.sleep(17) 
+                
             self.background.setVisible(True)
             REAL_SETTINGS.setSetting("INTRO_PLAYED","true")
         
