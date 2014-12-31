@@ -27,7 +27,7 @@
     # xbmcaddon.Addon('plugin.program.super.favourites').openSettings()
     # return
     
-   #   Copyright (C) 2014 Lunatixz
+   #   Copyright (C) 2014 Kevin S. Graer
 #
 #
 # This file is part of PseudoTV Live.
@@ -64,7 +64,7 @@ def readSettings2():
     NEWLST = []
     channelTYPE = 0
 
-    if os.path.exists(settingsFile):
+    if xbmcvfs.exists(settingsFile):
         f = open(settingsFile,'r')
         lineLST = f.readlines()
 

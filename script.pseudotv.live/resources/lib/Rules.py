@@ -29,7 +29,7 @@ from Playlist import PlaylistItem
 
 class RulesList:
     def __init__(self):
-        self.ruleList = [BaseRule(), ScheduleChannelRule(), HandleChannelLogo(), NoShowRule(), DontAddChannel(), EvenShowsRule(), ForceRandom(), ForceRealTime(), ForceResume(), HandleIceLibrary(), HandleBCT(), HandlePOP(), InterleaveChannel(), OnlyUnWatchedRule(), OnlyWatchedRule(), AlwaysPause(), PlayShowInOrder(), RenameRule(), SetResetTime()]
+        self.ruleList = [BaseRule(), ScheduleChannelRule(), HandleChannelLogo(), NoShowRule(), DontAddChannel(), EvenShowsRule(), ForceRandom(), ForceRealTime(), ForceResume(), Handle3D(), HandleIceLibrary(), HandleBCT(), HandlePOP(), InterleaveChannel(), OnlyUnWatchedRule(), OnlyWatchedRule(), AlwaysPause(), PlayShowInOrder(), RenameRule(), SetResetTime()]
 
 
     def getRuleCount(self):
@@ -1315,16 +1315,9 @@ class PlayShowInOrder(BaseRule):
 
 class SetResetTime(BaseRule):
     def __init__(self):
-        
-        if SETTOP ==  'true':
-            self.name = "Reset Every x Hours"
-            self.optionLabels = ['Number of Hours']
-            self.optionValues = ['1']
-        else:
-            self.name = "Reset Every x Days"
-            self.optionLabels = ['Number of Days']
-            self.optionValues = ['1']
-        
+        self.name = "Reset Every x Hours"
+        self.optionLabels = ['Number of Hours']
+        self.optionValues = ['24']
         self.myId = 13
         self.actions = RULES_ACTION_START
 
@@ -1335,16 +1328,10 @@ class SetResetTime(BaseRule):
 
     def getTitle(self):
         if len(self.optionValues[0]) > 0:
-            if SETTOP ==  'true':
-                if self.optionValues[0] == '1':
-                    return "Reset Every Hour"
-                else:
-                    return "Reset Every " + self.optionValues[0] + " Hours"
+            if self.optionValues[0] == '1':
+                return "Reset Every Hour"
             else:
-                if self.optionValues[0] == '1':
-                    return "Reset Every Day"
-                else:
-                    return "Reset Every " + self.optionValues[0] + " Days"
+                return "Reset Every " + self.optionValues[0] + " Hours"
 
         return self.name
 
@@ -1362,15 +1349,15 @@ class SetResetTime(BaseRule):
     def runAction(self, actionid, channelList, channeldata):
         if actionid == RULES_ACTION_START:
             curchan = channeldata.channelNumber
-            numdays = 0
+            numhours = 0
 
             try:
-                numdays = int(self.optionValues[0])
+                numhours = int(self.optionValues[0])
             except:
                 pass
 
-            if numdays <= 0:
-                self.log("Invalid count: " + str(numdays))
+            if numhours <= 0:
+                self.log("Invalid count: " + str(numhours))
                 return channeldata
 
             rightnow = int(time.time())
@@ -1384,23 +1371,57 @@ class SetResetTime(BaseRule):
             if rightnow >= nextreset:
                 channeldata.isValid = False
                 ADDON_SETTINGS.setSetting('Channel_' + str(curchan) + '_changed', 'True')
-                
-                if SETTOP ==  'true':
-                    # nextreset = rightnow + (60 * 60 * numdays)
-                    nextreset = rightnow + (60 * numdays)
-                else:
-                    nextreset = rightnow + (60 * 60 * 24 * numdays)
-                    
+                nextreset = rightnow + ((60 * 60 * numhours) - 120) #58min hour.
                 ADDON_SETTINGS.setSetting('Channel_' + str(curchan) + '_SetResetTime', str(nextreset))
 
         return channeldata
 
 
+class Handle3D(BaseRule):
+    def __init__(self):
+        self.name = "Filter 3D Media"
+        self.optionLabels = ['Include 3D Media']
+        self.optionValues = ['Yes']
+        self.myId = 19
+        self.actions = RULES_ACTION_START | RULES_ACTION_FINAL_MADE | RULES_ACTION_FINAL_LOADED
+        self.selectBoxOptions = [["Yes", "No"]]
 
+        
+    def copy(self):
+        return Handle3D()
+
+
+    def getTitle(self):
+        if self.optionValues[0] == 'Yes':
+            return 'Include 3D Media'
+        else:
+            return 'Exclude 3D Media'
+
+
+    def onAction(self, act, optionindex):
+        self.onActionSelectBox(act, optionindex)
+        return self.optionValues[optionindex]
+
+
+    def runAction(self, actionid, channelList, channeldata):
+        if actionid == RULES_ACTION_START:
+            self.stored3dValue = channelList.inc3D
+            self.log("Option for Handle3D is " + self.optionValues[0])
+
+            if self.optionValues[0] == 'Yes':
+                channelList.inc3D = True
+            else:
+                channelList.inc3D = False
+        elif actionid == RULES_ACTION_FINAL_MADE or actionid == RULES_ACTION_FINAL_LOADED:
+            channelList.inc3D = self.stored3dValue
+
+        return channeldata
+
+        
 class HandleIceLibrary(BaseRule):
     def __init__(self):
-        self.name = "IceLibrary Streams"
-        self.optionLabels = ['Include Streams']
+        self.name = "Filter STRM Files"
+        self.optionLabels = ['Include STRM Files']
         self.optionValues = ['Yes']
         self.myId = 14
         self.actions = RULES_ACTION_START | RULES_ACTION_FINAL_MADE | RULES_ACTION_FINAL_LOADED
@@ -1413,9 +1434,9 @@ class HandleIceLibrary(BaseRule):
 
     def getTitle(self):
         if self.optionValues[0] == 'Yes':
-            return 'Include IceLibrary Streams'
+            return 'Include STRM Files'
         else:
-            return 'Exclude IceLibrary Streams'
+            return 'Exclude STRM Files'
 
 
     def onAction(self, act, optionindex):
@@ -1426,7 +1447,7 @@ class HandleIceLibrary(BaseRule):
     def runAction(self, actionid, channelList, channeldata):
         if actionid == RULES_ACTION_START:
             self.storedIceLibValue = channelList.incIceLibrary
-            self.log("Option for IceLibrary is " + self.optionValues[0])
+            self.log("Option for HandleIceLibrary is " + self.optionValues[0])
 
             if self.optionValues[0] == 'Yes':
                 channelList.incIceLibrary = True
@@ -1440,7 +1461,7 @@ class HandleIceLibrary(BaseRule):
         
 class HandleBCT(BaseRule):
     def __init__(self):
-        self.name = "BCT's"
+        self.name = "Ignore BCT's"
         self.optionLabels = ["Include BCT's"]
         self.optionValues = ['Yes']
         self.myId = 17
@@ -1481,7 +1502,7 @@ class HandleBCT(BaseRule):
            
 class HandlePOP(BaseRule):
     def __init__(self):
-        self.name = "Coming up next popup"
+        self.name = 'Ignore "Coming up" popup'
         self.optionLabels = ['Display Coming Up Next']
         self.optionValues = ['Yes']
         self.myId = 18

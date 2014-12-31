@@ -1,7 +1,7 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 #
-#     Copyright (C) 2011-2014 Tommy Winther, Lunatixz, Martijn Kaijser
+#     Copyright (C) 2011-2014 Tommy Winther, Kevin S. Graer, Martijn Kaijser
 #
 #    This program is free software: you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -83,7 +83,7 @@ class TMDB(object):
     def getMovie(self, movieName, year):
         if CACHE_ON:
             try:
-                result = parsers.cacheFunction(self.getMovie_NEW, movieName, year)
+                result = parserTMDB.cacheFunction(self.getMovie_NEW, movieName, year)
             except:
                 result = self.getMovie_NEW(movieName, year)
                 pass                
@@ -112,7 +112,7 @@ class TMDB(object):
     def getMPAA(self, imdbid):
         if CACHE_ON:
             try:
-                result = parsers.cacheFunction(self.getMPAA_NEW, imdbid)
+                result = parserTMDB.cacheFunction(self.getMPAA_NEW, imdbid)
             except:
                 result = self.getMPAA_NEW(imdbid)
                 pass               
@@ -267,7 +267,7 @@ class TMDB(object):
         log('Downloader: get_data - Cache')
         if CACHE_ON:
             try:
-                result = parsers.cacheFunction(self.get_data_new, url, data_type)
+                result = parserTMDB.cacheFunction(self.get_data_new, url, data_type)
             except:
                 result = self.get_data_new(url, data_type)
                 pass

@@ -1,5 +1,5 @@
 #
-#      Copyright (C) 2013 Tommy Winther, Lunatixz, Martijn Kaijser
+#      Copyright (C) 2013 Tommy Winther, Kevin S. Graer, Martijn Kaijser
 #      http://tommy.winther.nu
 #
 #  This Program is free software; you can redistribute it and/or modify
@@ -37,7 +37,6 @@ else:
     
 from Globals import *
 from xml.etree import ElementTree as ET
-from language import *
 
 # Commoncache plugin import
 try:
@@ -64,7 +63,7 @@ class TVDB(object):
     def getIdByZap2it(self, zap2it_id):
         xbmc.log("getIdByZap2it Cache")
         if CACHE_ON:
-            result = parsers.cacheFunction(self.getIdByZap2it_NEW, zap2it_id)
+            result = parserTVDB.cacheFunction(self.getIdByZap2it_NEW, zap2it_id)
         else:
             result = self.getIdByZap2it_NEW(zap2it_id)
         if not result:
@@ -87,7 +86,7 @@ class TVDB(object):
     def getIdByIMDB(self, imdb_id):
         xbmc.log("getIdByIMDB Cache")
         if CACHE_ON:
-            result = parsers.cacheFunction(self.getIdByIMDB_NEW, imdb_id)
+            result = parserTVDB.cacheFunction(self.getIdByIMDB_NEW, imdb_id)
         else:
             result = self.getIdByIMDB_NEW(imdb_id)
         if not result:
@@ -111,7 +110,7 @@ class TVDB(object):
     def getEpisodeByAirdate(self, tvdbid, airdate):
         xbmc.log("getEpisodeByAirdate Cache")
         if CACHE_ON:
-            result = parsers.cacheFunction(self.getEpisodeByAirdate_NEW, tvdbid, airdate)
+            result = parserTVDB.cacheFunction(self.getEpisodeByAirdate_NEW, tvdbid, airdate)
         else:
             result = self.getEpisodeByAirdate_NEW(tvdbid, airdate)
         if not result:
@@ -129,7 +128,7 @@ class TVDB(object):
     def getEpisodeByID(self, tvdbid):
         xbmc.log("getIdByIMDB Cache")
         if CACHE_ON:
-            result = parsers.cacheFunction(self.getEpisodeByID_NEW, tvdbid)
+            result = parserTVDB.cacheFunction(self.getEpisodeByID_NEW, tvdbid)
         else:
             result = self.getEpisodeByID_NEW(tvdbid)
         if not result:
@@ -148,7 +147,7 @@ class TVDB(object):
         xbmc.log("getIdByShowName Cache")
         if CACHE_ON:
             try:
-                result = parsers.cacheFunction(self.getIdByShowName_NEW, showName)
+                result = parserTVDB.cacheFunction(self.getIdByShowName_NEW, showName)
             except:
                 result = self.getIdByShowName_NEW(showName)
                 pass
@@ -175,7 +174,7 @@ class TVDB(object):
     def getBannerByID(self, tvdbid, type):
         xbmc.log("getIdByZap2it Cache")
         if CACHE_ON:
-            result = parsers.cacheFunction(self.getBannerByID_NEW, tvdbid, type)
+            result = parserTVDB.cacheFunction(self.getBannerByID_NEW, tvdbid, type)
         else:
             result = self.getBannerByID_NEW(tvdbid, type)
         if not result:
@@ -213,7 +212,7 @@ class TVDB(object):
         xbmc.log("getIMDBbyShowName Cache")
         if CACHE_ON:
             try:
-                result = parsers.cacheFunction(self.getIMDBbyShowName_NEW, showName)
+                result = parserTVDB.cacheFunction(self.getIMDBbyShowName_NEW, showName)
             except:
                 result = self.getIMDBbyShowName_NEW(showName)
                 pass
@@ -237,15 +236,9 @@ class TVDB(object):
         except Exception,e:
             return 'Empty'
 
-    def get_image_list(self, media_id):
-        log('Downloader: get_image_list, ' + str(media_id))
-        self.api_key = TVDB_API_KEY
-        API_URL = 'http://www.thetvdb.com/api/'+TVDB_API_KEY+'/series/'+media_id+'/banners.xml'
-        log('Downloader: API_URL = ' + str(API_URL))
-        self.url_prefix = 'http://www.thetvdb.com/banners/'
+    def get_image_list(self, media_id, mode):
         image_list = []
-        data = self.get_data(API_URL, 'xml')
-        log('Downloader: data, ' + str(data))
+        data = get_data(API_URL%(self.api_key, media_id), 'xml')
         try:
             tree = ET.fromstring(data)
             for image in tree.findall('Banner'):
@@ -281,7 +274,7 @@ class TVDB(object):
                             x,y = image.findtext('BannerType2').split('x')
                             info['width'] = int(x)
                             info['height'] = int(y)
-                        except Exception,e:
+                        except:
                             info['type2'] = image.findtext('BannerType2')
 
                     # check if fanart has text
@@ -300,42 +293,43 @@ class TVDB(object):
                         info['season'] = image.findtext('Season')
                     else:
                         info['season'] = 'n/a'
-                    
-                    info['generalinfo'] = '%s: %s  |  ' %( 'Language', get_language(info['language']).capitalize())
-                        
-                    if info:
-                        image_list.append(info)
-                        
-        except Exception,e:
-            pass
+
+                    # Create Gui string to display
+                    info['generalinfo'] = '%s: %s  |  ' %( __localize__(32141), get_language(info['language']).capitalize())
+                    if info['season'] != 'n/a':
+                        info['generalinfo'] += '%s: %s  |  ' %( __localize__(32144), info['season'] )
+                    if 'height' in info:
+                        info['generalinfo'] += '%s: %sx%s  |  ' %( __localize__(32145), info['height'], info['width'] )
+                    info['generalinfo'] += '%s: %s  |  %s: %s  |  ' %( __localize__(32142), info['rating'], __localize__(32143), info['votes'] )
+
+                if info:
+                    image_list.append(info)
+        except:
+            raise NoFanartError(media_id)
         if image_list == []:
-            pass
+            raise NoFanartError(media_id)
         else:
             # Sort the list before return. Last sort method is primary
             image_list = sorted(image_list, key=itemgetter('rating'), reverse=True)
             image_list = sorted(image_list, key=itemgetter('season'))
             image_list = sorted(image_list, key=itemgetter('language'))
             return image_list
-    
-    
+            
     # Retrieve JSON data from cache function
-    def get_data(self, url, data_type ='json'):
-        log('Downloader: get_data - Cache')
+    def get_data(url, data_type ='json'):
+        xbmc.log('script.pseudotv.live-fanarttv: get_data')
         if CACHE_ON:
-            try:
-                result = parsers.cacheFunction(self.get_data_new, url, data_type)
-            except:
-                result = self.get_data_new(url, data_type)
-                pass
+            result = parserFANTV.cacheFunction(get_data_new, url, data_type)
         else:
-            result = self.get_data_new(url, data_type)
+            result = get_data_new(url, data_type)
         if not result:
             result = 'Empty'
         return result
 
+
     # Retrieve JSON data from site
-    def get_data_new(self, url, data_type):
-        log('Downloader: get_data_new - Cache expired. Retrieving new data')
+    def get_data_new(url, data_type):
+        #log('Cache expired. Retrieving new data')
         data = []
         try:
             request = urllib2.Request(url)
@@ -363,8 +357,6 @@ class TVDB(object):
             raise HTTPTimeout(url)
         except socket.timeout, e:
             raise HTTPTimeout(url)
-        except Exception,e:
+        except:
             data = 'Empty'
         return data
-
-

@@ -1,4 +1,4 @@
-#   Copyright (C) 2013 Lunatixz
+#   Copyright (C) 2014 Kevin S. Graer
 #
 #
 # This file is part of PseudoTV.
@@ -25,7 +25,7 @@ from Playlist import Playlist
 from Globals import *
 from Channel import Channel
 from ChannelList import ChannelList
-from FileAccess import FileLock, FileAccess
+from FileAccess import FileAccess
 from xml.etree import ElementTree as ET
 from Artdownloader import *
 from PVRdownload import *
@@ -62,16 +62,19 @@ class EPGWindow(xbmcgui.WindowXMLDialog):
         self.showingInfo = False
         self.infoOffset = 0
         self.infoOffsetV = 0
-        self.log('Using EPG Coloring = ' + str(REAL_SETTINGS.getSetting('EPGcolor_enabled')))
         self.textureButtonFocus = MEDIA_LOC + BUTTON_FOCUS
         self.textureButtonNoFocus = MEDIA_LOC + BUTTON_NO_FOCUS
         self.showSeasonEpisode = REAL_SETTINGS.getSetting("ShowSeEp") == "true"
-        self.PVRchtype = ''
+        self.PVRchtype = 0
+        self.PTVChanNum = 0
+        self.PVRTimeOffset = 0
         self.PVRmediapath = ''
         self.PVRchname = ''
         self.PVRtitle = ''
-        self.setArtwork1_Unlocked = False
-        self.setArtwork2_Unlocked = False
+        self.PVRtimestamp = ''
+        self.PVRtype = ''
+        self.PVRid = 0
+        self.Artdownloader = Artdownloader()  
 
         for i in range(self.rowCount):
             self.channelButtons[i] = []
@@ -86,7 +89,6 @@ class EPGWindow(xbmcgui.WindowXMLDialog):
 
     # set the time labels
     def setTimeLabels(self, thetime):
-        self.log('setTimeLabels')
         now = datetime.datetime.fromtimestamp(thetime)
         self.getControl(104).setLabel(now.strftime('%A, %b %d'))
         delta = datetime.timedelta(minutes=30)
@@ -98,9 +100,9 @@ class EPGWindow(xbmcgui.WindowXMLDialog):
                 self.getControl(101 + i).setLabel(now.strftime("%H:%M"))
 
             now = now + delta
-
+            
         self.log('setTimeLabels return')
-
+            
 
     def log(self, msg, level = xbmc.LOGDEBUG):
         log('EPGWindow: ' + msg, level)
@@ -112,8 +114,6 @@ class EPGWindow(xbmcgui.WindowXMLDialog):
                 
     
     def onInit(self):
-        self.log('onInit')
-
         timex, timey = self.getControl(120).getPosition()
         timew = self.getControl(120).getWidth()
         timeh = self.getControl(120).getHeight()
@@ -127,7 +127,6 @@ class EPGWindow(xbmcgui.WindowXMLDialog):
 
             if textcolor > 0:
                 self.textcolor = hex(textcolor)[2:]
-                self.logDebug("onInit.Self.textcolor = " + str(self.textcolor))
         except:
             pass
         
@@ -136,7 +135,6 @@ class EPGWindow(xbmcgui.WindowXMLDialog):
 
             if focusedcolor > 0:
                 self.focusedcolor = hex(focusedcolor)[2:]
-                self.logDebug("onInit.Self.focusedcolor = " + str(self.focusedcolor))
         except:
             pass
         
@@ -196,7 +194,6 @@ class EPGWindow(xbmcgui.WindowXMLDialog):
             self.MyOverlayWindow.sleepTimeValue = 1
             self.MyOverlayWindow.startSleepTimer()
             return
-
         self.log('onInit return')
 
 
@@ -204,7 +201,8 @@ class EPGWindow(xbmcgui.WindowXMLDialog):
     def setChannelButtons(self, starttime, curchannel, singlerow = -1):
         self.log('setChannelButtons ' + str(starttime) + ', ' + str(curchannel))
         self.centerChannel = self.MyOverlayWindow.fixChannel(curchannel)
-        # This is done twice to guarantee we go back 2 channels.  If the previous 2 channels
+       
+       # This is done twice to guarantee we go back 2 channels.  If the previous 2 channels
         # aren't valid, then doing a fix on curchannel - 2 may result in going back only
         # a single valid channel.
         curchannel = self.MyOverlayWindow.fixChannel(curchannel - 1, False)
@@ -221,7 +219,7 @@ class EPGWindow(xbmcgui.WindowXMLDialog):
         basecur = curchannel
         self.toRemove.append(self.currentTimeBar)
         myadds = []
-
+        
         for i in range(self.rowCount):
             if singlerow == -1 or singlerow == i:
                 self.setButtons(starttime, basecur, i)
@@ -243,9 +241,21 @@ class EPGWindow(xbmcgui.WindowXMLDialog):
 
             try:        
                 if REAL_SETTINGS.getSetting("EPGTextEnable") == "0":
-                    self.getControl(321 + i).setImage(self.channelLogos + self.MyOverlayWindow.channels[curchannel - 1].name + '.png')
+                    # self.getControl(321 + i).setImage(self.channelLogos + self.MyOverlayWindow.channels[curchannel - 1].name + '.png')
+                    
+                    try:
+                        chtype = int(ADDON_SETTINGS.getSetting('Channel_' + str(curchannel) + '_type'))        
+                    except:
+                        chtype = 0
+                        pass
+                        
+                    chname = (self.MyOverlayWindow.channels[curchannel - 1].name)
+                    plpos = self.determinePlaylistPosAtTime(starttime, (curchannel - 1))
+                    mediapath = ascii(self.MyOverlayWindow.channels[curchannel - 1].getItemFilename(plpos))
+                    setImage = self.Artdownloader.FindLogo(chtype, chname, mediapath)
+                    self.getControl(321 + i).setImage(setImage)
                 else:
-                    self.getControl(321 + i).setImage('')
+                    self.getControl(321 + i).setImage('NA.png')
             except:
                 pass
 
@@ -278,7 +288,7 @@ class EPGWindow(xbmcgui.WindowXMLDialog):
         except:
             xbmc.log('self.addControls(myadds) in use')
             pass
-
+        
 
     # round the given time down to the nearest half hour
     def roundToHalfHour(self, thetime):
@@ -292,6 +302,56 @@ class EPGWindow(xbmcgui.WindowXMLDialog):
 
         return time.mktime(n.timetuple())
 
+        
+    def GetMylabel(self, mylabel, myLiveID):
+        chanlist = ChannelList()  
+        playcount = int((chanlist.unpackLiveID(myLiveID))[4])  
+        rating = (chanlist.unpackLiveID(myLiveID))[5]                     
+        
+        if playcount == 0:
+            New = '(NEW)'
+        else:
+            New = ''
+        if rating != 'NR':
+
+            Rat = '[' + rating + ']'
+        else:
+            Rat = ''  
+        
+        mylabel = (mylabel + ' ' + New + ' ' + Rat).replace('()','').replace('[]','')
+        return mylabel
+
+        
+    def GetEPGtype(self, genre):
+        #rewrite as option switch, dictionary? faster? todo
+        if genre in COLOR_RED_TYPE:
+            EPGTEXTURE = (EPGGENRE_LOC + 'COLOR_RED.png')
+        elif genre in COLOR_GREEN_TYPE:
+            EPGTEXTURE = (EPGGENRE_LOC + 'COLOR_GREEN.png')
+        elif genre in COLOR_mdGREEN_TYPE:
+            EPGTEXTURE = (EPGGENRE_LOC + 'COLOR_mdGREEN.png')
+        elif genre in COLOR_BLUE_TYPE:
+            EPGTEXTURE = (EPGGENRE_LOC + 'COLOR_BLUE.png')
+        elif genre in COLOR_ltBLUE_TYPE:
+            EPGTEXTURE = (EPGGENRE_LOC + 'COLOR_ltBLUE.png')
+        elif genre in COLOR_CYAN_TYPE:
+            EPGTEXTURE = (EPGGENRE_LOC + 'COLOR_CYAN.png')
+        elif genre in COLOR_ltCYAN_TYPE:
+            EPGTEXTURE = (EPGGENRE_LOC + 'COLOR_ltCYAN.png')
+        elif genre in COLOR_PURPLE_TYPE:
+            EPGTEXTURE = (EPGGENRE_LOC + 'COLOR_PURPLE.png')
+        elif genre in COLOR_ltPURPLE_TYPE:
+            EPGTEXTURE = (EPGGENRE_LOC + 'COLOR_ltPURPLE.png')
+        elif genre in COLOR_ORANGE_TYPE:
+            EPGTEXTURE = (EPGGENRE_LOC + 'COLOR_ORANGE.png')
+        elif genre in COLOR_YELLOW_TYPE:
+            EPGTEXTURE = (EPGGENRE_LOC + 'COLOR_YELLOW.png')
+        elif genre in COLOR_GRAY_TYPE:
+            EPGTEXTURE = (EPGGENRE_LOC + 'COLOR_GRAY.png')
+        else:#Unknown or COLOR_ltGRAY_TYPE
+            EPGTEXTURE = (EPGGENRE_LOC + 'COLOR_ltGRAY.png') 
+        return EPGTEXTURE
+        
 
     # create the buttons for the specified channel in the given row
     def setButtons(self, starttime, curchannel, row):
@@ -306,11 +366,11 @@ class EPGWindow(xbmcgui.WindowXMLDialog):
             try:
                 chtype = int(ADDON_SETTINGS.getSetting('Channel_' + str(curchannel) + '_type'))        
             except:
-                chtype = ''
+                chtype = 0
                 pass
             
             chname = ascii(self.MyOverlayWindow.channels[curchannel - 1].name)
-            self.lastExitTime = (ADDON_SETTINGS.getSetting("LastExitTime"))
+            
             if xbmc.Player().isPlaying() == False:
                 self.log('No video is playing, not adding buttons')
                 self.closeEPG()
@@ -322,13 +382,8 @@ class EPGWindow(xbmcgui.WindowXMLDialog):
 
             # if the channel is paused, then only 1 button needed
             nowDate = datetime.datetime.now()
-            self.logDebug("setbuttonnowtime " + str(nowDate))
             playlistpos = int(xbmc.PlayList(xbmc.PLAYLIST_VIDEO).getposition())
                         
-            # if chname == 'PseudoCinema':
-                # if self.MyOverlayWindow.channels[curchannel - 1].getItemDuration(playlistpos) <= 1800:
-                    # self.channelButtons[row].append(xbmcgui.ControlButton(basex, basey, basew, baseh, self.MyOverlayWindow.channels[curchannel - 1].name, focusTexture=self.textureButtonFocus, noFocusTexture=self.textureButtonNoFocus, alignment=4, textColor=self.textcolor, focusedColor=self.focusedcolor))
-
             if chname in BYPASS_EPG:
                 self.channelButtons[row].append(xbmcgui.ControlButton(basex, basey, basew, baseh, self.MyOverlayWindow.channels[curchannel - 1].name, focusTexture=self.textureButtonFocus, noFocusTexture=self.textureButtonNoFocus, alignment=4, textColor=self.textcolor, focusedColor=self.focusedcolor))
                 
@@ -350,7 +405,6 @@ class EPGWindow(xbmcgui.WindowXMLDialog):
                     if chtype == 8:
                         #episodetitle is actually the start time of each show that the playlist gets from channellist.py
                         tmpDate = self.MyOverlayWindow.channels[curchannel - 1].getItemtimestamp(playlistpos)
-                        self.logDebug("setButtons.setbuttonnowtime2 " + str(tmpDate))
                         
                         try:#sloppy fix, for threading issue with strptime.
                             t = time.strptime(tmpDate, '%Y-%m-%d %H:%M:%S')
@@ -372,8 +426,7 @@ class EPGWindow(xbmcgui.WindowXMLDialog):
                         playlistpos = self.MyOverlayWindow.channels[curchannel - 1].playlistPosition
                         #episodetitle is actually the start time of each show that the playlist gets from channellist.py
                         tmpDate = self.MyOverlayWindow.channels[curchannel - 1].getItemtimestamp(playlistpos)
-                        self.logDebug("setButtons.setbuttonnowtime2 " + str(tmpDate))
-                        
+
                         try:#sloppy fix, for threading issue with strptime.
                             t = time.strptime(tmpDate, '%Y-%m-%d %H:%M:%S')
                         except:
@@ -389,7 +442,8 @@ class EPGWindow(xbmcgui.WindowXMLDialog):
                         reftime = time.time()
                        
                     else:
-                        playlistpos = self.MyOverlayWindow.channels[curchannel - 1].playlistPosition #everyotherchannel epg
+                         #everyotherchannel epg
+                        playlistpos = self.MyOverlayWindow.channels[curchannel - 1].playlistPosition
                         videotime = self.MyOverlayWindow.channels[curchannel - 1].showTimeOffset
                         reftime = self.MyOverlayWindow.channels[curchannel - 1].lastAccessTime
 
@@ -411,7 +465,7 @@ class EPGWindow(xbmcgui.WindowXMLDialog):
                 endtime = starttime + 5400
                 totaltime = 0
                 totalloops = 0
-
+                
                 while reftime < endtime and totalloops < 1000:
                     xpos = int(basex + (totaltime * (basew / 5400.0)))
                     tmpdur = self.MyOverlayWindow.channels[curchannel - 1].getItemDuration(playlistpos)
@@ -427,10 +481,7 @@ class EPGWindow(xbmcgui.WindowXMLDialog):
                             shouldskip = True
 
                     if self.MyOverlayWindow.hideShortItems and shouldskip == False:
-                    
-                        # if chtype >= 10 and chtype != 12 and chtype != 13 and self.MyOverlayWindow.channels[curchannel - 1].getItemDuration(playlistpos) <= 450:
-                            # shouldskip = True
-                            # tmpdur = 0              
+                                 
                         if self.MyOverlayWindow.channels[curchannel - 1].getItemDuration(playlistpos) < self.MyOverlayWindow.shortItemLength and (chtype <= 7 and chtype != 13):
                             shouldskip = True
                             tmpdur = 0
@@ -455,137 +506,35 @@ class EPGWindow(xbmcgui.WindowXMLDialog):
 
                     if shouldskip == False and width >= 30:
                         chanlist = ChannelList()
+                        chname = (self.MyOverlayWindow.channels[curchannel - 1].name)
+                        mediapath = ascii(self.MyOverlayWindow.channels[curchannel - 1].getItemFilename(playlistpos))
                         mylabel = self.MyOverlayWindow.channels[curchannel - 1].getItemTitle(playlistpos)
-                        mygenre = self.MyOverlayWindow.channels[curchannel - 1].getItemgenre(playlistpos)
                         myLiveID = self.MyOverlayWindow.channels[curchannel - 1].getItemLiveID(playlistpos)
-                        
-                        try:
-                            chtype = int(ADDON_SETTINGS.getSetting('Channel_' + str(curchannel) + '_type'))
-                        except:
-                            chtype = ''
-                            pass
-                            
                         type = (chanlist.unpackLiveID(myLiveID))[0]
-                        playcount = int((chanlist.unpackLiveID(myLiveID))[4])
-                        rating = (chanlist.unpackLiveID(myLiveID))[5]
+                        id = (chanlist.unpackLiveID(myLiveID))[1]
                         
-                        if REAL_SETTINGS.getSetting("EPG.xInfo") == "true":
-                        
-                            if playcount == 0:
-                                New = '(NEW)'
-                            else:
-                                New = ''
-                                
-                            if rating != 'NR':
-                                Rat = '(' + rating + ')'
-                            else:
-                                Rat = ''
-                                
-                            mylabel = (mylabel + ' ' + New + ' ' + Rat).replace('()','')
-                            
-                        if not FileAccess.exists(EPGGENRE_CACHE_LOC):
-                            FileAccess.makedirs(EPGGENRE_CACHE_LOC)
-
-                        def EPGtype(genre):
-                            if genre in COLOR_RED_TYPE:
-                                EPGTEXTURE = (EPGGENRE_LOC + 'COLOR_RED.png')
-                            elif genre in COLOR_GREEN_TYPE:
-                                EPGTEXTURE = (EPGGENRE_LOC + 'COLOR_GREEN.png')
-                            elif genre in COLOR_mdGREEN_TYPE:
-                                EPGTEXTURE = (EPGGENRE_LOC + 'COLOR_mdGREEN.png')
-                            elif genre in COLOR_BLUE_TYPE:
-                                EPGTEXTURE = (EPGGENRE_LOC + 'COLOR_BLUE.png')
-                            elif genre in COLOR_ltBLUE_TYPE:
-                                EPGTEXTURE = (EPGGENRE_LOC + 'COLOR_ltBLUE.png')
-                            elif genre in COLOR_CYAN_TYPE:
-                                EPGTEXTURE = (EPGGENRE_LOC + 'COLOR_CYAN.png')
-                            elif genre in COLOR_ltCYAN_TYPE:
-                                EPGTEXTURE = (EPGGENRE_LOC + 'COLOR_ltCYAN.png')
-                            elif genre in COLOR_PURPLE_TYPE:
-                                EPGTEXTURE = (EPGGENRE_LOC + 'COLOR_PURPLE.png')
-                            elif genre in COLOR_ltPURPLE_TYPE:
-                                EPGTEXTURE = (EPGGENRE_LOC + 'COLOR_ltPURPLE.png')
-                            elif genre in COLOR_ORANGE_TYPE:
-                                EPGTEXTURE = (EPGGENRE_LOC + 'COLOR_ORANGE.png')
-                            elif genre in COLOR_YELLOW_TYPE:
-                                EPGTEXTURE = (EPGGENRE_LOC + 'COLOR_YELLOW.png')
-                            elif genre in COLOR_GRAY_TYPE:
-                                EPGTEXTURE = (EPGGENRE_LOC + 'COLOR_GRAY.png')
-                            elif genre in COLOR_ltGRAY_TYPE:
-                                EPGTEXTURE = (EPGGENRE_LOC + 'COLOR_ltGRAY.png')
-                            else:#Unknown
-                                EPGTEXTURE = (EPGGENRE_LOC + 'COLOR_ltGRAY.png')
-                                
-                            return EPGTEXTURE
+                        if REAL_SETTINGS.getSetting("EPG.xInfo") == "true":  
+                            mylabel = self.GetMylabel(mylabel, myLiveID)
                             
                         if REAL_SETTINGS.getSetting('EPGcolor_enabled') == '1':
+                            
                             if type == 'movie' and REAL_SETTINGS.getSetting('EPGcolor_MovieGenre') == "false":
-                                self.textureButtonNoFocus = EPGtype('Movie')
+                                self.textureButtonNoFocus = self.GetEPGtype('Movie')
                             else:
-                                self.textureButtonNoFocus = EPGtype(str(mygenre))
+                                mygenre = self.MyOverlayWindow.channels[curchannel - 1].getItemgenre(playlistpos)
+                                self.textureButtonNoFocus = self.GetEPGtype(mygenre)
                                 
                         elif REAL_SETTINGS.getSetting('EPGcolor_enabled') == '2':
-                            self.textureButtonNoFocus = EPGtype(str(chtype))
+                            self.textureButtonNoFocus = self.GetEPGtype(str(chtype))
                            
                         elif REAL_SETTINGS.getSetting('EPGcolor_enabled') == '3':
-                            self.textureButtonNoFocus = EPGtype(str(rating)) 
-                            
+                            rating = (chanlist.unpackLiveID(myLiveID))[5]
+                            self.textureButtonNoFocus = self.GetEPGtype(rating)
                         else:   
                             self.textureButtonNoFocus = MEDIA_LOC + BUTTON_NO_FOCUS
-                      
-                        # textureButtonNoFocusFLEname = os.path.split(self.textureButtonNoFocus)[1]        
-                        # textureButtonNoFocusFLEname = os.path.splitext(textureButtonNoFocusFLEname)[0]
 
-                        # ButtonHD = (EPGGENRE_LOC + 'HD.png')                                      
-                        # print xpos, basey, width, baseh
-                        # overlayWidth = 35
-                        # overlayHeight = 17
-                        # overlayXpos = xpos - overlayHeight
-                        # overlayBasey = basey - overlayWidth
-                        
-                        # if ImageEnhance == True:
-                            # print 'ImageEnhance'
-                            # Background = Image.open(EPGGENRE_LOC + 'BG.png')                
-                            # Background = Background.convert("RGBA")
-                            
-                            # ButtonHD = Image.open(EPGGENRE_LOC + 'HD.png')               
-                            # ButtonHD = ButtonHD.convert("RGBA")
-        
-                            # Background = Background.resize((basey,baseh), Image.ANTIALIAS)
-                            
-                            # Background.paste(ButtonHD, (0, 0), ButtonHD)
-                            # Background.save(EPGGENRE_CACHE_LOC + mygenre + "-HD.png")
-                            # ButtonHD = (EPGGENRE_CACHE_LOC + mygenre + "-HD.png")
-                            
-                        #######################################################################
-                        # overlay = Image.open(self.textureButtonNoFocus)
-                        # background = Image.open(EPGGENRE_LOC + 'blank.png')   
-                        # mask = Image.open(EPGGENRE_LOC + 'HD.png') 
-                        # background = background.convert("RGBA")
-                        # overlay = overlay.convert("RGBA")
-                        # mask = mask.convert("RGBA")
-                        # new_img = Image.composite(background, overlay, mask) 
-                        # # new_img = Image.blend(background, overlay, 0.5)   
-                        # new_img.save(EPGGENRE_CACHE_LOC + mygenre + "-HD.png")
-                        # self.textureButtonNoFocus = (EPGGENRE_CACHE_LOC + mygenre + "-HD.png")
-                        #########################################################################
-
-                        #########################################################################
-                        # background = Image.open(self.textureButtonNoFocusGenre)
-                        # foreground = Image.open(self.textureButtonNoFocusHD)
-                        # Image.blend(background, foreground, 1.0).save(EPGGENRE_CACHE_LOC + mygenre + "-HD.png")
-                        # self.textureButtonNoFocusGenre = (EPGGENRE_CACHE_LOC + mygenre + "-HD.png")
-                        # background = Image.open(self.textureButtonNoFocusGenre)
-                        # overlay = Image.open(self.textureButtonNoFocusHD)
-                        # background = background.convert("RGBA")
-                        # overlay = overlay.convert("RGBA")
-                        # new_img = Image.blend(background, overlay, 0.5)                                
-                        # new_img.save(EPGGENRE_CACHE_LOC + str(chtype) + '-HD.png')
-                        # self.textureButtonNoFocusChtype = (EPGGENRE_CACHE_LOC + str(chtype) + '-HD.png')
-                        #########################################################################
-                             
+                        #Create Control array
                         self.channelButtons[row].append(xbmcgui.ControlButton(xpos, basey, width, baseh, mylabel, focusTexture=self.textureButtonFocus, noFocusTexture=self.textureButtonNoFocus, alignment=4, font=self.textfont, textColor=self.textcolor, focusedColor=self.focusedcolor))
-                        # self.channelButtons[row].append(xbmcgui.ControlButton(overlayXpos, overlayBasey, overlayWidth, overlayHeight, '', focusTexture=self.textureButtonFocus, noFocusTexture=ButtonHD, alignment=4, font=self.textfont, textColor=self.textcolor, focusedColor=self.focusedcolor))
 
                     totaltime += tmpdur
                     reftime += tmpdur
@@ -704,7 +653,8 @@ class EPGWindow(xbmcgui.WindowXMLDialog):
 
     def closeEPG(self):
         self.log('closeEPG')
-
+        self.MyOverlayWindow.showingEPG = False
+        
         try:
             self.removeControl(self.currentTimeBar)
             self.MyOverlayWindow.startSleepTimer()
@@ -959,7 +909,6 @@ class EPGWindow(xbmcgui.WindowXMLDialog):
         starttime = self.shownTime + (left / (basew / 5400.0))
         chnoffset = self.focusRow - 2
         newchan = self.centerChannel
-        self.Artdownloader = Artdownloader()  
         
         while chnoffset != 0:
             if chnoffset > 0:
@@ -980,30 +929,39 @@ class EPGWindow(xbmcgui.WindowXMLDialog):
         try:
             chtype = int(ADDON_SETTINGS.getSetting('Channel_' + str(newchan) + '_type'))       
         except:
-            chtype = ''
+            chtype = 0
             pass
         
-        setting3 = ADDON_SETTINGS.getSetting('Channel_' + str(newchan) + '_3')
         chanlist = ChannelList()
         mediapath = ascii(self.MyOverlayWindow.channels[newchan - 1].getItemFilename(plpos))
         chname = ascii(self.MyOverlayWindow.channels[newchan - 1].name)
         title = ascii(self.MyOverlayWindow.channels[newchan - 1].getItemTitle(plpos))
+        timestamp = ascii(self.MyOverlayWindow.channels[newchan - 1].getItemtimestamp(plpos))
         LiveID = ascii(self.MyOverlayWindow.channels[newchan - 1].getItemLiveID(plpos))
+        # videotime = self.MyOverlayWindow.channels[newchan - 1].showTimeOffset
         
-        if mediapath[0:5] == 'stack':
-            smpath = (mediapath.split(' , ')[0]).replace('stack://','')
-            mpath = (os.path.split(smpath)[0])
-        elif mediapath.startswith('plugin://plugin.video.bromix.youtube') or mediapath.startswith('plugin://plugin.video.youtube/?path=/root'):
-            mpath = (os.path.split(mediapath)[0])
-            YTid = mediapath.split('id=')[1]
-            mpath = (mpath + '/' + YTid).replace('/?path=/root','')
-        else:
-            mpath = (os.path.split(mediapath)[0])
+        try:
+            if mediapath[0:5] == 'stack':
+                smpath = (mediapath.split(' , ')[0]).replace('stack://','')
+                mpath = (os.path.split(smpath)[0])
+            elif mediapath.startswith('plugin://plugin.video.bromix.youtube') or mediapath.startswith('plugin://plugin.video.youtube'):
+                mpath = (os.path.split(mediapath)[0])
+                YTid = mediapath.split('id=')[1]
+                mpath = (mpath + '/' + YTid).replace('/?path=/root','').replace('/play','')
+            else:
+                mpath = (os.path.split(mediapath)[0])
+        except Exception: 
+            mpath = mediapath
+            buggalo.onExceptionRaised()  
         
+        #PVR Globals
         self.PVRchtype = chtype
         self.PVRmediapath = mediapath
         self.PVRchname = chname
         self.PVRtitle = title
+        self.PVRtimestamp = timestamp
+        self.PTVChanNum = newchan
+        # self.PVRTimeOffset = videotime
         
         LiveID = chanlist.unpackLiveID(LiveID)
         type = LiveID[0]
@@ -1011,23 +969,29 @@ class EPGWindow(xbmcgui.WindowXMLDialog):
         Managed = LiveID[3]
         playcount = int(LiveID[4])
                 
-        #Check if VideoWindow Patch found, change label.
-        if self.MyOverlayWindow.VideoWindow == True:
-            try:
-                self.getControl(523).setLabel('NOW WATCHING:')
-            except:
-                pass
+        self.PVRtype = type
+        self.PVRid = id
+                
+                
+                
+        #Check if VideoWindow Patch found, Toggle Visible.
+        try:
+            if self.MyOverlayWindow.VideoWindow == True:
+                self.getControl(523).setVisible(True)
+                self.getControl(524).setLabel(self.MyOverlayWindow.PVRtitle)
+            else:
+                self.getControl(523).setVisible(False)
+        except:
+            pass
                 
         #Change Label when Dynamic artwork enabled
         try:
-            self.getControl(522).setVisible(False)
-
             if self.infoOffset > 0:
                 self.getControl(515).setVisible(False)
             elif self.infoOffset < 0:
                 self.getControl(515).setVisible(False)
             elif self.infoOffset == 0 and self.infoOffsetV == 0:
-                self.getControl(515).setVisible(False) 
+                self.getControl(515).setVisible(True) 
             elif self.infoOffsetV != 0 and self.infoOffset == 0:           
                 self.getControl(515).setVisible(False)
         except:
@@ -1054,15 +1018,9 @@ class EPGWindow(xbmcgui.WindowXMLDialog):
         self.getControl(502).setLabel(self.MyOverlayWindow.channels[newchan - 1].getItemDescription(plpos))
         self.getControl(503).setImage(self.channelLogos + ascii(self.MyOverlayWindow.channels[newchan - 1].name) + '.png')
         
-        if REAL_SETTINGS.getSetting("DynamicArt_Enabled") == "true" and REAL_SETTINGS.getSetting("ArtService_Enabled") == "true":  
+        if REAL_SETTINGS.getSetting("ArtService_Enabled") == "true" and REAL_SETTINGS.getSetting("ArtService_Running") == "false" and REAL_SETTINGS.getSetting("ArtService_Primed") == "true":
             self.log('Dynamic artwork enabled')
-            
-            #hide xbmc.videoplayer art since using dynamic art
-            try:
-                self.getControl(513).setVisible(False)
-            except:
-                pass  
-                
+                            
             #Sickbeard/Couchpotato == Managed
             try:
                 if Managed == 'True':
@@ -1073,6 +1031,7 @@ class EPGWindow(xbmcgui.WindowXMLDialog):
                         self.getControl(511).setImage(IMAGES_LOC + 'CP.png')                          
                 else:
                     self.getControl(511).setVisible(False)  
+                    self.getControl(511).setImage(IMAGES_LOC + 'NA.png') 
             except:
                 pass     
                 
@@ -1084,71 +1043,61 @@ class EPGWindow(xbmcgui.WindowXMLDialog):
                 elif playcount >= 1:
                     self.getControl(512).setImage(MEDIA_LOC + 'OLD.png')      
                 else:
-                    self.getControl(512).setVisible(False)      
+                    self.getControl(512).setVisible(False) 
+                    self.getControl(512).setImage(MEDIA_LOC + 'NA.png')     
             except:
                 pass  
 
             try:
                 type1 = str(self.getControl(507).getLabel())
                 type1EXT = self.Artdownloader.EXTtype(type1)
-                self.setArtwork1(type, chtype, id, mpath, type1EXT)
+                self.setArtwork1(type, chtype, chname, id, mpath, type1EXT)
             except:
-                print 'setShowInfo.Label 507 not found'
                 pass
                
             try:
                 type2 = str(self.getControl(509).getLabel())
                 type2EXT = self.Artdownloader.EXTtype(type2)
-                self.setArtwork2(type, chtype, id, mpath, type2EXT)
+                self.setArtwork2(type, chtype, chname, id, mpath, type2EXT)
             except:
-                print 'setShowInfo.Label 509 not found'
                 pass
         else:
-            #use xbmc.videoplayer art since not using dynamic art
             try:
-                self.getControl(508).setImage('NA.png')   
+                self.getControl(508).setImage(THUMB)
             except:
-                pass   
+                pass  
             try:
-                self.getControl(510).setImage('NA.png') 
+                self.getControl(510).setImage(THUMB)
             except:
-                pass   
-            try:
-                self.getControl(511).setImage('NA.png') 
-            except:
-                pass   
-            try:
-                self.getControl(512).setImage('NA.png') 
-            except:
-                pass   
-            try:
-                self.getControl(513).setVisible(True)
-            except:
-                pass   
+                pass  
 
         self.log('setShowInfo return')
 
         
-    def setArtwork1(self, type, chtype, id, mpath, type1EXT):
+    def setArtwork1(self, type, chtype, chname, id, mpath, type1EXT):
         self.log('setArtwork1')
         try:
+            self.getControl(508).setVisible(True)
             self.getControl(508).setImage('NA.png')
-            setImage1 = self.Artdownloader.FindArtwork_NEW(type, chtype, id, mpath, type1EXT)
+            setImage1 = self.Artdownloader.FindArtwork(type, chtype, chname, id, mpath, type1EXT)
             self.getControl(508).setImage(setImage1)
         except:
+            self.getControl(508).setVisible(False)
             pass  
     
     
-    def setArtwork2(self, type, chtype, id, mpath, type2EXT):
+    def setArtwork2(self, type, chtype, chname, id, mpath, type2EXT):
         self.log('setArtwork2')
         try: 
+            self.getControl(510).setVisible(True)
             self.getControl(510).setImage('NA.png')
-            setImage2 = self.Artdownloader.FindArtwork_NEW(type, chtype, id, mpath, type2EXT)
+            setImage2 = self.Artdownloader.FindArtwork(type, chtype, chname, id, mpath, type2EXT)
             self.getControl(510).setImage(setImage2)
         except:
+            self.getControl(510).setVisible(False)
             pass
     
-        
+    
     # using the currently selected button, play the proper shows
     def selectShow(self):
         self.log('selectShow')    
@@ -1176,12 +1125,13 @@ class EPGWindow(xbmcgui.WindowXMLDialog):
                     newchan = self.MyOverlayWindow.fixChannel(newchan - 1, False)
                     chnoffset += 1
 
+
             plpos = self.determinePlaylistPosAtTime(starttime, newchan)
             
             try:
                 chtype = int(ADDON_SETTINGS.getSetting('Channel_' + str(newchan) + '_type'))
             except:
-                chtype = ''
+                chtype = 0
                 pass
                 
             if plpos == -1:
@@ -1189,12 +1139,9 @@ class EPGWindow(xbmcgui.WindowXMLDialog):
                 return
            
             timedif = (time.time() - self.MyOverlayWindow.channels[newchan - 1].lastAccessTime)
-            
             pos = self.MyOverlayWindow.channels[newchan - 1].playlistPosition
-            
             showoffset = self.MyOverlayWindow.channels[newchan - 1].showTimeOffset
 
-            
             #code added for "LiveTV" types
             #Get the Start time of the show from "episodeitemtitle"
             #we just passed this from channellist.py ; just a fill in to get value
@@ -1226,23 +1173,59 @@ class EPGWindow(xbmcgui.WindowXMLDialog):
                     timedif -= self.MyOverlayWindow.channels[newchan - 1].getItemDuration(pos) - showoffset
                     pos = self.MyOverlayWindow.channels[newchan - 1].fixPlaylistIndex(pos + 1)
                     showoffset = 0
-
                 self.log('pos + plpos ' + str(pos) +', ' + str(plpos))
             
+
             if self.MyOverlayWindow.currentChannel == newchan:
                 if plpos == xbmc.PlayList(xbmc.PLAYLIST_MUSIC).getposition():
                     self.log('selectShow return current show')
                     return
 
                 if chtype == 8:
+                    tmpDate = self.PVRtimestamp
+                    try:#sloppy fix, for threading issue with strptime.
+                        t = time.strptime(tmpDate, '%Y-%m-%d %H:%M:%S')
+                    except:
+                        t = time.strptime(tmpDate, '%Y-%m-%d %H:%M:%S')
+                        pass
+                    Notify_Time = time.strftime('%I:%M%p, %A', t)
+                    
+                    if dlg.yesno("PseudoTV Live", "Would you like to set a reminder for [B]", str(self.PVRtitle) + '[/B] on channel [B]' + str(self.PTVChanNum), '[/B]at [B]'+ str(Notify_Time) + '[/B] ?'):
+                        self.setReminder(self.PVRtimestamp, Notify_Time, self.PVRtitle, self.PTVChanNum)
                     self.log('selectShow return current LiveTV channel')
                     return
             
             if pos != plpos:
                 if chtype == 8:
+                    tmpDate = self.PVRtimestamp
+                    try:#sloppy fix, for threading issue with strptime.
+                        t = time.strptime(tmpDate, '%Y-%m-%d %H:%M:%S')
+                    except:
+                        t = time.strptime(tmpDate, '%Y-%m-%d %H:%M:%S')
+                        pass
+                    Notify_Time = time.strftime('%I:%M%p, %A', t)
+                    
+                    if dlg.yesno("PseudoTV Live", "Would you like to set a reminder for [B]", str(self.PVRtitle) + '[/B] on channel [B]' + str(self.PTVChanNum), '[/B]at [B]'+ str(Notify_Time) + '[/B] ?'):
+                        self.setReminder(self.PVRtimestamp, Notify_Time, self.PVRtitle, self.PTVChanNum)
+
                     self.log('selectShow return different LiveTV channel')
                     return
                 else:
+                    Notify_Time = self.PVRTimeOffset
+                    
+                    if REAL_SETTINGS.getSetting("SelectAction") == "1":
+                        self.log('selectShow, Different Channel SelectAction = 1')
+                        if dlg.yesno("PseudoTV Live", "Would you like to set a reminder for [B]", str(self.PVRtitle) + '[/B] on channel [B]' + str(self.PTVChanNum), '[/B]at [B]'+ str(Notify_Time) + '[/B] ?'):
+                            self.setReminder(self.PVRtimestamp, Notify_Time, self.PVRtitle, self.PTVChanNum) 
+                            return
+                    elif REAL_SETTINGS.getSetting("SelectAction") == "2":
+                        self.log('selectShow, Different Channel SelectAction = 2')
+                        if dlg.yesno("PseudoTV Live", "Would you like to watch [B]", str(self.PVRtitle) + '[/B] Now or set a reminder for channel [B]' + str(self.PTVChanNum), '[/B]at [B]'+ str(Notify_Time) + '[/B] ?'):
+                            print 'Watch Now Selected'
+                        else:
+                            self.setReminder(self.PVRtimestamp, Notify_Time, self.PVRtitle, self.PTVChanNum)
+                            return
+                            
                     self.MyOverlayWindow.channels[newchan - 1].setShowPosition(plpos)
                     self.MyOverlayWindow.channels[newchan - 1].setShowTime(0)
                     self.MyOverlayWindow.channels[newchan - 1].setAccessTime(time.time())
@@ -1260,85 +1243,104 @@ class EPGWindow(xbmcgui.WindowXMLDialog):
         try:
             chtype = int(ADDON_SETTINGS.getSetting('Channel_' + str(channel) + '_type'))  
         except:
-            chtype = ''
+            chtype = 0
             pass
             
-        self.lastExitTime = ADDON_SETTINGS.getSetting("LastExitTime")
-        nowDate = datetime.datetime.now()
-        playlistpos = int(xbmc.PlayList(xbmc.PLAYLIST_VIDEO).getposition())
+        self.lastExitTime = ADDON_SETTINGS.getSetting("LastExitTime")     
         
-        # if the channel is paused, then it's just the current item
-        if self.MyOverlayWindow.channels[channel - 1].isPaused:
-            self.log('determinePlaylistPosAtTime paused return')
-            return self.MyOverlayWindow.channels[channel - 1].playlistPosition
-        else:
-            # Find the show that was running at the given time
-            # Use the current time and show offset to calculate it
-            # At timedif time, channelShowPosition was playing at channelTimes
-            # The only way this isn't true is if the current channel is curchannel since
-            # it could have been fast forwarded or rewinded (rewound)?
-            if channel == self.MyOverlayWindow.currentChannel: #currentchannel epg
-                #Live TV pull date from the playlist entry
-                if chtype == 8:
-                    playlistpos = int(xbmc.PlayList(xbmc.PLAYLIST_VIDEO).getposition())
-                    tmpDate = self.MyOverlayWindow.channels[channel - 1].getItemtimestamp(playlistpos)
-                    self.log("setbuttonnowtime2 " + str(tmpDate))
-                   
-                    try:#sloppy fix, for threading issue with strptime.
-                        t = time.strptime(tmpDate, '%Y-%m-%d %H:%M:%S')
-                    except:
-                        t = time.strptime(tmpDate, '%Y-%m-%d %H:%M:%S')
-                        pass
-                            
-                    epochBeginDate = time.mktime(t)
-                    videotime = time.time() - epochBeginDate
-                    reftime = time.time()
-                else:
-                    playlistpos = int(xbmc.PlayList(xbmc.PLAYLIST_VIDEO).getposition())
-                    try:
-                        videotime = xbmc.Player().getTime()
-                    except:
-                        videotime = xbmc.Player().getTime()
-                        pass
-                    reftime = time.time()
-                   
+        try:
+            # if the channel is paused, then it's just the current item
+            if self.MyOverlayWindow.channels[channel - 1].isPaused:
+                self.log('determinePlaylistPosAtTime paused return')
+                return self.MyOverlayWindow.channels[channel - 1].playlistPosition
             else:
-                #Live TV pull date from the playlist entry
-                if chtype == 8:
-                    playlistpos = self.MyOverlayWindow.channels[channel - 1].playlistPosition
-                    tmpDate = self.MyOverlayWindow.channels[channel - 1].getItemtimestamp(playlistpos)
-                    self.log("setbuttonnowtime2 " + str(tmpDate))
+                # Find the show that was running at the given time
+                # Use the current time and show offset to calculate it
+                # At timedif time, channelShowPosition was playing at channelTimes
+                # The only way this isn't true is if the current channel is curchannel since
+                # it could have been fast forwarded or rewinded (rewound)?
+                if channel == self.MyOverlayWindow.currentChannel: #currentchannel epg
+                    playlistpos = int(xbmc.PlayList(xbmc.PLAYLIST_MUSIC).getposition())
+                    #Live TV pull date from the playlist entry
+                    if chtype == 8:
+                        tmpDate = self.MyOverlayWindow.channels[channel - 1].getItemtimestamp(playlistpos)
+                        self.log("setbuttonnowtime2 " + str(tmpDate))
                        
-                    try:#sloppy fix, for threading issue with strptime.
-                        t = time.strptime(tmpDate, '%Y-%m-%d %H:%M:%S')
-                    except:
-                        t = time.strptime(tmpDate, '%Y-%m-%d %H:%M:%S')
-                        pass
-                        
-                    epochBeginDate = time.mktime(t)
-                    while epochBeginDate + self.MyOverlayWindow.channels[channel - 1].getItemDuration(playlistpos) <  time.time():
-                        epochBeginDate += self.MyOverlayWindow.channels[channel - 1].getItemDuration(playlistpos)
-                        playlistpos = self.MyOverlayWindow.channels[channel - 1].fixPlaylistIndex(playlistpos + 1)
-                       
-                    videotime = time.time() - epochBeginDate
-                    self.log('videotime ' + str(videotime))
-                    reftime = time.time()
-                      
+                        try:#sloppy fix, for threading issue with strptime.
+                            t = time.strptime(tmpDate, '%Y-%m-%d %H:%M:%S')
+                        except:
+                            t = time.strptime(tmpDate, '%Y-%m-%d %H:%M:%S')
+                            pass
+                                
+                        epochBeginDate = time.mktime(t)
+                        videotime = time.time() - epochBeginDate
+                        reftime = time.time()
+                    else:
+                        try:
+                            videotime = xbmc.Player().getTime()
+                        except:
+                            videotime = xbmc.Player().getTime()
+                            pass
+                        reftime = time.time() 
                 else:
-                    playlistpos = self.MyOverlayWindow.channels[channel - 1].playlistPosition 
-                    videotime = self.MyOverlayWindow.channels[channel - 1].showTimeOffset
-                    reftime = self.MyOverlayWindow.channels[channel - 1].lastAccessTime
+                    playlistpos = self.MyOverlayWindow.channels[channel - 1].playlistPosition
+                    #Live TV pull date from the playlist entry
+                    if chtype == 8:
+                        tmpDate = self.MyOverlayWindow.channels[channel - 1].getItemtimestamp(playlistpos)
+                        self.log("setbuttonnowtime2 " + str(tmpDate))
+                           
+                        try:#sloppy fix, for threading issue with strptime.
+                            t = time.strptime(tmpDate, '%Y-%m-%d %H:%M:%S')
+                        except:
+                            t = time.strptime(tmpDate, '%Y-%m-%d %H:%M:%S')
+                            pass
+                            
+                        epochBeginDate = time.mktime(t)
+                        while epochBeginDate + self.MyOverlayWindow.channels[channel - 1].getItemDuration(playlistpos) <  time.time():
+                            epochBeginDate += self.MyOverlayWindow.channels[channel - 1].getItemDuration(playlistpos)
+                            playlistpos = self.MyOverlayWindow.channels[channel - 1].fixPlaylistIndex(playlistpos + 1)
+                           
+                        videotime = time.time() - epochBeginDate
+                        self.log('videotime ' + str(videotime))
+                        reftime = time.time()
+                          
+                    else:
+                        videotime = self.MyOverlayWindow.channels[channel - 1].showTimeOffset
+                        reftime = self.MyOverlayWindow.channels[channel - 1].lastAccessTime
 
-            # normalize reftime to the beginning of the video
-            reftime -= videotime
+                # normalize reftime to the beginning of the video
+                reftime -= videotime
 
-            while reftime > starttime:
-                playlistpos -= 1
-                reftime -= self.MyOverlayWindow.channels[channel - 1].getItemDuration(playlistpos)
+                while reftime > starttime:
+                    playlistpos -= 1
+                    reftime -= self.MyOverlayWindow.channels[channel - 1].getItemDuration(playlistpos)
 
-            while reftime + self.MyOverlayWindow.channels[channel - 1].getItemDuration(playlistpos) < starttime:
-                reftime += self.MyOverlayWindow.channels[channel - 1].getItemDuration(playlistpos)
-                playlistpos += 1
+                while reftime + self.MyOverlayWindow.channels[channel - 1].getItemDuration(playlistpos) < starttime:
+                    reftime += self.MyOverlayWindow.channels[channel - 1].getItemDuration(playlistpos)
+                    playlistpos += 1
 
-            self.log('determinePlaylistPosAtTime return' + str(self.MyOverlayWindow.channels[channel - 1].fixPlaylistIndex(playlistpos)))
-            return self.MyOverlayWindow.channels[channel - 1].fixPlaylistIndex(playlistpos)
+                self.log('determinePlaylistPosAtTime return' + str(self.MyOverlayWindow.channels[channel - 1].fixPlaylistIndex(playlistpos)))
+                return self.MyOverlayWindow.channels[channel - 1].fixPlaylistIndex(playlistpos)
+        except:
+            pass
+        
+      
+    def setReminder(self, tmpDate, cleanDate, title, channel):
+        jump = REAL_SETTINGS.getSetting("AutoJump") == "true"
+        
+        try:#sloppy fix, for threading issue with strptime.
+            t = time.strptime(tmpDate, '%Y-%m-%d %H:%M:%S')
+        except:
+            t = time.strptime(tmpDate, '%Y-%m-%d %H:%M:%S')
+            pass
+            
+        epochBeginDate = time.mktime(t)
+        now = time.time()
+        reminder_time = round(((epochBeginDate - now) / 60) - 1)
+        reminder_threadtime = round(((epochBeginDate - now) / 60) - 1) * 60
+        msg = title + 'on Channel ' + str(channel) +' starts in 1m'
+        
+        if jump == False:
+            xbmc.executebuiltin('XBMC.AlarmClock(PseudoTV Live, XBMC.Notification("PseudoTV Live",'+ msg +',4000,'+ THUMB +'),'+ str(reminder_time) + ',false)')
+        else:
+            self.MyOverlayWindow.SetAutoJump(reminder_threadtime, cleanDate, title, channel)

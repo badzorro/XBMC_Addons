@@ -9,7 +9,17 @@
     </coordinates>
     <animation effect="fade" time="700">WindowOpen</animation>
     <animation effect="fade" time="700">WindowClose</animation>
-    <controls>
+    <controls>            
+        <!-- #### Skinners Include Everything for videowindow patch to work #### -->
+        <!-- PATCH START --> <!--
+        <control type="videowindow">
+            <description>video</description>
+            <width>1280</width>
+            <height>720</height>
+            <aspectratio>stretch</aspectratio>
+        </control>
+        --> <!-- PATCH END -->
+        <!-- ################################################################## -->
         <control type="button" id="99">
             <visible>false</visible>			
             <label>0xFFFFFFFF</label><!--focused text color-->
@@ -36,8 +46,8 @@
             <texture>pstvlBackground.png</texture>
             <colordiffuse>FFFFFFFF</colordiffuse>
         </control>        
-        <!--TEXT Now Playing-->
-        <control type="label" id="522">
+        <!--TEXT Now Watching-->
+        <control type="label" id="523">
             <description>Now watching Label</description>
             <posx>950</posx>
             <posy>525</posy>
@@ -46,47 +56,18 @@
             <label></label>
             <font>Font_Bold34</font>
             <align>center</align>
+            <label>NOW WATCHING:</label>
             <textcolor>C0C0C0C0</textcolor>
-        </control>   
+        </control>           
         <!--NowPlaying.Window-->
         <control type="group">            
             <posx>960</posx>
-            <posy>570</posy>
-            <!--Movie.landscape Now Playing-->
-            <control type="image" id="513">
-                <description>landscape</description>
-                <colordiffuse>FFFFFFFF</colordiffuse>
-                <width>285</width>
-                <height>125</height>
-                <align>center</align>
-                <aspectratio>keep</aspectratio>
-                <texture fallback="landscape.png">$INFO[Player.Art(landscape)]</texture>
-            <!--TV.landscape Now Playing-->
-            <control type="image">
-                <description>landscape</description>
-                <colordiffuse>FFFFFFFF</colordiffuse>
-                <width>285</width>
-                <height>125</height>
-                <align>center</align>
-                <aspectratio>keep</aspectratio>
-                <texture>$INFO[Player.Art(tvshow.landscape)]</texture>
-            </control>        
-            </control>    
+            <posy>570</posy>   
             <control type="button" id="507">
                 <description>Dynamic art</description>
                 <label>landscape</label>
                 <visible>false</visible>
-            </control><!-- 
-            <control type="image">
-                <description>Logo</description>
-                <colordiffuse>FFFFFFFF</colordiffuse>
-                <width>285</width>
-                <height>125</height>
-                <align>center</align>
-                <aspectratio>keep</aspectratio>
-                <texture>logo.png</texture>
-                <visible>!Control.IsVisible(508)|!Control.IsVisible(510)</visible>
-            </control> -->
+            </control>
             <control type="image" id="508">
                 <description>Dynamic art</description>
                 <colordiffuse>FFFFFFFF</colordiffuse>
@@ -95,29 +76,6 @@
                 <align>center</align>
                 <aspectratio>keep</aspectratio>
             </control>
-            <control type="button" id="509">
-                <description>Dynamic art</description>
-                <label>landscape</label>
-                <visible>false</visible>
-            </control>
-            <control type="image" id="510">
-                <description>Dynamic art</description>
-                <colordiffuse>FFFFFFFF</colordiffuse>
-                <width>285</width>
-                <height>125</height>
-                <align>center</align>
-                <aspectratio>keep</aspectratio>
-            </control>
-            <!-- #### Skinners Include Everything for videowindow patch to work #### -->
-            <!-- PATCH START --> <!--
-            <control type="videowindow">
-                <description>video</description>
-                <width>285</width>
-                <height>125</height>
-                <aspectratio>stretch</aspectratio>
-            </control>
-            --> <!-- PATCH END -->
-            <!-- ################################################################## -->
         </control>
         <control type="image" id="512">
             <description>Unaired NEW Icon</description>            
@@ -127,7 +85,7 @@
             <height>100</height>
             <aspectratio>keep</aspectratio>
         </control>
-<!--LEFT/RIGHT art-->
+        <!--LEFT/RIGHT art-->
         <control type="image">
             <description>left</description>
             <posx>375</posx>
@@ -146,7 +104,7 @@
             <colordiffuse>FFFFFFFF</colordiffuse>
             <texture>right.png</texture>
         </control>
-<!--Dark Column-->
+        <!--Dark Column-->
         <control type="image">
             <description>Channel Overlay</description>
             <posx>77</posx>
@@ -204,9 +162,9 @@
         <!--Time/Weather-->    
         <control type="label">
             <description>Time</description>
-            <posx>62</posx>
+            <posx>50</posx>
             <posy>60</posy>
-            <width min="40" max="100">auto</width>
+            <width>100</width>
             <height>30</height>
             <label>$INFO[System.Time]</label>
             <font>font25</font>
