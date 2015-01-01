@@ -171,11 +171,11 @@ if int(REAL_SETTINGS.getSetting('SkinSelector')) == 0:
         EPGGENRE_LOC = xbmc.translatePath(os.path.join(MEDIA_LOC, 'epg-genres')) + '/'
     else:
         Skin_Select = 'Default'
-        REAL_SETTINGS.setSetting("SkinSelector","2")
-        
+        MEDIA_LOC = xbmc.translatePath(os.path.join(ADDON_PATH, 'resources', 'skins', Skin_Select, 'media')) + '/'       
+        EPGGENRE_LOC = xbmc.translatePath(os.path.join(ADDON_PATH, 'resources', 'skins', Skin_Select, 'media', 'epg-genres')) + '/'  
+      
     if not xbmcvfs.exists(MEDIA_LOC):
         MEDIA_LOC = DEFAULT_MEDIA_LOC 
-        
     if not xbmcvfs.exists(EPGGENRE_LOC):
         EPGGENRE_LOC = DEFAULT_EPGGENRE_LOC         
 else:

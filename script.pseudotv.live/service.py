@@ -22,7 +22,6 @@ import xbmc, xbmcgui, xbmcaddon, xbmcvfs
 
 from time import sleep
 
-
 # Plugin Info
 ADDON_ID = 'script.pseudotv.live'
 REAL_SETTINGS = xbmcaddon.Addon(id=ADDON_ID)
@@ -85,9 +84,7 @@ def donorCHK():
         
 def autostart():
     xbmc.log('script.pseudotv.live-Service: autostart')   
-    if NOTIFY == 'true':
-        xbmc.executebuiltin("Notification( %s, %s, %d, %s)" % ("AutoStart PseudoTV Live","Service Starting...", 4000, THUMB) )
-    
+    xbmc.executebuiltin("Notification( %s, %s, %d, %s)" % ("AutoStart PseudoTV Live","Service Starting...", 4000, THUMB) )
     IDLE_TIME = AUTOSTART_TIMER[int(REAL_SETTINGS.getSetting('timer_amount'))] 
     sleep(IDLE_TIME)
     xbmc.executebuiltin('RunScript("' + ADDON_PATH + '/default.py' + '")')

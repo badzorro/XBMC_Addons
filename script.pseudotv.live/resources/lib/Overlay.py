@@ -42,8 +42,10 @@ try:
 except:
     REAL_SETTINGS.setSetting("UNAlter_ChanBug","true")
     pass
-   
     
+# Buggalo gmail
+buggalo.GMAIL_RECIPIENT = 'pseudotvlive@gmail.com'
+       
 class MyPlayer(xbmc.Player):
     
     def __init__(self):
@@ -192,7 +194,8 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
         self.ActionTimerInt = float(REAL_SETTINGS.getSetting("Playback_timeout"))
         self.Browse = ''
         self.showingEPG = False
-        REAL_SETTINGS.setSetting("ArtService_Running","false")
+        REAL_SETTINGS.setSetting("ArtService_Primed","true")  
+        REAL_SETTINGS.setSetting("ArtService_Running","false")  
         REAL_SETTINGS.setSetting('SyncXMLTV_Running', "false")
         
         if REAL_SETTINGS.getSetting("UPNP1") == "true" or REAL_SETTINGS.getSetting("UPNP2") == "true" or REAL_SETTINGS.getSetting("UPNP3") == "true":
@@ -1650,7 +1653,6 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
                 if self.inputChannel != self.currentChannel:
                     self.setChannel(self.inputChannel)
                 self.inputChannel = -1
-                
             else:
                 # Otherwise, show the EPG
                 if not self.showingMenu:
@@ -1669,8 +1671,8 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
                     self.hideInfo()
                     self.hidePOP()
                     self.newChannel = 0
-                    self.showingEPG = True
                     self.myEPG.doModal()
+                    self.showingEPG = True
 
                     if self.channelThread.isAlive():
                         self.channelThread.unpause()
@@ -1768,23 +1770,15 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
 
                     del dlg
         
-        elif action == ACTION_SHOW_INFO:
-            self.hidePOP()
-            self.hideMenu()
-                    
+        elif action == ACTION_SHOW_INFO:   
             if self.ignoreInfoAction:
                 self.ignoreInfoAction = False
             else:
-                if xbmc.getCondVisibility('Player.ShowInfo'):
-                    json_query = '{"jsonrpc": "2.0", "method": "Input.Info", "id": 1}'
-                    self.ignoreInfoAction = True
-                    self.channelList.sendJSON(json_query);
-                        
                 if self.showingInfo:
-                    self.hideInfo()
                     self.hidePOP()
                     self.hideMenu()
-
+                    self.hideInfo()           
+            
                     if xbmc.getCondVisibility('Player.ShowInfo'):
                         json_query = '{"jsonrpc": "2.0", "method": "Input.Info", "id": 1}'
                         self.ignoreInfoAction = True

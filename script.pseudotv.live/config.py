@@ -30,9 +30,7 @@ from resources.lib.AdvancedConfig import AdvancedConfig
 from resources.lib.FileAccess import FileAccess
 from resources.lib.Migrate import Migrate
 
-
-NUMBER_CHANNEL_TYPES = 8
-
+NUMBER_CHANNEL_TYPES = 20
 
 class ConfigWindow(xbmcgui.WindowXMLDialog):
     def __init__(self, *args, **kwargs):

@@ -73,8 +73,7 @@ try:
 except Exception,e:  
     xbmc.log("script.pseudotv.live-ChannelList: metahandler Import Failed" + str(e))    
     pass
-      
-      
+
 class ChannelList:
     def __init__(self):
         self.networkList = []
@@ -1950,7 +1949,6 @@ class ChannelList:
             self.logDebug(json_folder_detail)
 
         self.log("buildFileList return")
-        #fileList = self.remDupes(fileList)
         return fileList
 
 
@@ -1966,7 +1964,6 @@ class ChannelList:
             self.log('buildMixedFileList Problem parsing playlist ' + filename, xbmc.LOGERROR)
             xml.close()
             
-            #fileList = self.remDupes(fileList)
             return fileList
 
         for rule in rules:
@@ -1979,8 +1976,6 @@ class ChannelList:
                 fileList.extend(self.buildFileList(GEN_CHAN_LOC + rulename, channel, limit, 0))
 
         self.log("buildMixedFileList returning")
-        
-        #fileList = self.remDupes(fileList)
         return fileList
 
         
@@ -3404,7 +3399,6 @@ class ChannelList:
             path = 'plugin://plugin.video.youtube/?action=play_video&videoid='
         else:
             path = False
-            
         return path
             
             
@@ -3605,7 +3599,6 @@ class ChannelList:
     def GetBumperList_NEW(self, BumpersType, chname):
         BumperLST = []
         duration = 0
-        channel = str(self.settingChannel)
         
         #Local
         if BumpersType == "1":  
@@ -3623,7 +3616,7 @@ class ChannelList:
 
                     for i in range(len(LocalLST)):    
                         if self.background == False:
-                            self.updateDialog.update(self.updateDialogProgress, "Updating channel " + str(channel), "adding Bumpers", "parsing Local Bumpers")
+                            self.updateDialog.update(self.updateDialogProgress, "Updating channel " + str(self.settingChannel), "adding Bumpers", "parsing Local Bumpers")
                         filename = xbmc.translatePath(os.path.join(PATH,((LocalLST[i])[0])))
                         duration = self.videoParser.getVideoLength(filename)
                         if duration == 0:
@@ -3638,6 +3631,7 @@ class ChannelList:
         #Internet
         elif BumpersType == "2":
             self.log("GetBumperList_NEW - Internet")
+            include = False
             self.vimeo_ok = self.plugin_ok('plugin://plugin.video.vimeo')
             
             if self.youtube_ok != False:
@@ -3653,7 +3647,7 @@ class ChannelList:
                     for i in range(len(Bumper_List)):                        
                     
                         if self.background == False:
-                            self.updateDialog.update(self.updateDialogProgress, "Updating channel " + str(channel), "adding Bumpers", "parsing Internet Bumpers")
+                            self.updateDialog.update(self.updateDialogProgress, "Updating channel " + str(self.settingChannel), "adding Bumpers", "parsing Internet Bumpers")
                         
                         lines = str(linesLST[i]).replace('\n','')
                         lines = lines.split('|')
@@ -3662,17 +3656,19 @@ class ChannelList:
                         BumperSource = lines[2].split('_')[0]
                         BumperID = lines[2].split('_')[1]
 
-                        if BumperSource == 'vimeo':
-                            if self.vimeo_ok == True:
-                                url = 'plugin://plugin.video.vimeo/?path=/root/video&action=play_video&videoid=' + BumperID
-                            else:
-                                pass
-                        else:
-                            url = self.youtube_ok + BumperID
-                        
                         if chname.lower() == ChannelName.lower():
-                            InternetBumper = (str(duration) + ',' + url)
-                            InternetBumperLST.append(InternetBumper)
+                            if BumperSource == 'vimeo':
+                                if self.vimeo_ok == True:
+                                    include = True
+                                    url = 'plugin://plugin.video.vimeo/?path=/root/video&action=play_video&videoid=' + BumperID
+                            elif BumperSource == 'youtube':
+                                if self.youtube_ok != False:
+                                    include = True
+                                    url = self.youtube_ok + BumperID
+
+                            if include == True:
+                                InternetBumper = (str(duration) + ',' + url)
+                                InternetBumperLST.append(InternetBumper)
                     BumperLST.extend(InternetBumperLST)#Put local bumper list into master bumper list.                
                 except Exception: 
                     buggalo.onExceptionRaised()
@@ -5278,24 +5274,6 @@ class ChannelList:
         return allparts
         
         
-    def remDupes(self, filelist, idfun=None):
-        self.log("remDupes")   
-        # order preserving
-        if idfun is None:
-           def idfun(x): return x
-        seen = {}
-        result = []
-        for item in filelist:
-           marker = idfun(item)
-           # in old Python versions:
-           # if seen.has_key(marker)
-           # but in new ones:
-           if marker in seen: continue
-           seen[marker] = 1
-           result.append(item)
-        return result
-
-        
     def findZap2itID(self, CHname, filename):
         self.log("findZap2itID, CHname = " + CHname)
         
@@ -5628,4 +5606,3 @@ class ChannelList:
         
         self.log('XBMCversion = ' + version)
         return version
-      
