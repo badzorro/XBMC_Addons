@@ -79,6 +79,7 @@ if xbmcgui.Window(10000).getProperty("PseudoTVRunning") != "True":
         PTVL_Version = REAL_SETTINGS.getSetting("PTVL_Version")
     except:
         REAL_SETTINGS.setSetting("PTVL_Version", __version__)
+        PTVL_Version = REAL_SETTINGS.getSetting("PTVL_Version")
         pass  
     
     CurSkin = REAL_SETTINGS.getSetting("SkinSelector")
@@ -86,6 +87,7 @@ if xbmcgui.Window(10000).getProperty("PseudoTVRunning") != "True":
         LastSkin = REAL_SETTINGS.getSetting("LastSkin")
     except:
         REAL_SETTINGS.setSetting("LastSkin", CurSkin)
+        LastSkin = REAL_SETTINGS.getSetting("LastSkin")
         pass
 
     if PTVL_Version != __version__:
