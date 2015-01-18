@@ -1,4 +1,4 @@
-#   Copyright (C) 2014 Kevin S. Graer
+#   Copyright (C) 2015 Kevin S. Graer
 #
 #
 # This file is part of PseudoTV Live.
@@ -17,17 +17,23 @@
 # along with PseudoTV.  If not, see <http://www.gnu.org/licenses/>.
 
 
-import os, re, sys, time, zipfile, threading
-import urllib, urllib2, base64, fileinput
+import os, re, sys, time, zipfile, threading, requests
+import urllib, urllib2, base64, fileinput, shutil
 import xbmc, xbmcgui, xbmcplugin, xbmcvfs, xbmcaddon
-import urlparse, time
+import urlparse, time, string
 
 from Globals import *  
 from FileAccess import FileAccess
 from Queue import Queue
 from HTMLParser import HTMLParser
+
+def requestDownload(url, fle):
+    response = requests.get(url, stream=True)
+    with open(fle, 'wb') as out_file:
+        shutil.copyfileobj(response.raw, out_file)
+    del response
     
-    
+
 def ClearPlaylists():
     log('ClearPlaylists')
     for i in range(999):
@@ -300,4 +306,23 @@ class lsHTMLParser(HTMLParser):
                 icon_name=os.path.splitext(os.path.basename(icon_abs_url))[0].upper()
                 results[icon_name]=icon_abs_url
         return results   
-       
+
+
+class FileCache:
+	'''Caches the contents of a set of files.
+	Avoids reading files repeatedly from disk by holding onto the
+	contents of each file as a list of strings.
+	'''
+
+	def __init__(self):
+		self.filecache = {}
+		
+	def grabFile(self, filename):
+		'''Return the contents of a file as a list of strings.
+		New line characters are removed.
+		'''
+		if not self.filecache.has_key(filename):
+			f = open(filename, "r")
+			self.filecache[filename] = string.split(f.read(), '\n')
+			f.close()
+		return self.filecache[filename]

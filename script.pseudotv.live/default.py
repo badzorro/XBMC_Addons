@@ -1,4 +1,4 @@
-#   Copyright (C) 2014 Kevin S. Graer
+#   Copyright (C) 2015 Kevin S. Graer
 #
 #
 # This file is part of PseudoTV Live.
@@ -46,12 +46,9 @@ buggalo.GMAIL_RECIPIENT = 'pseudotvlive@gmail.com'
 def PseudoTV():
     xbmcgui.Window(10000).setProperty("PseudoTVRunning", "True")
     import resources.lib.Overlay as Overlay
+    
+    MyOverlayWindow = Overlay.TVOverlay("script.pseudotv.live.TVOverlay.xml", __cwd__, Skin_Select)
 
-    try:
-        MyOverlayWindow = Overlay.TVOverlay("script.pseudotv.live.TVOverlay.xml", __cwd__, Skin_Select)
-    except:
-        MyOverlayWindow = Overlay.TVOverlay("script.pseudotv.TVOverlay.xml", __cwd__, Skin_Select)
-        
     for curthread in threading.enumerate():
         try:
             log("Active Thread: " + str(curthread.name), xbmc.LOGERROR)
@@ -59,14 +56,12 @@ def PseudoTV():
             if curthread.name != "MainThread":
                 try:
                     curthread.join()      
-                except Exception: 
-                    buggalo.onExceptionRaised()
+                except: 
                     pass
 
                 log("Joined " + curthread.name)
                 
-        except Exception: 
-            buggalo.onExceptionRaised()  
+        except: 
             pass
             
     xbmcgui.Window(10000).setProperty("PseudoTVRunning", "False")
@@ -107,6 +102,9 @@ if xbmcgui.Window(10000).getProperty("PseudoTVRunning") != "True":
     else:
         #Check if Outdated/Install Repo
         VersionCompare()
+        
+        # #Check Messaging Service todo
+        # Announcement()
 
         # Clear System Caches    
         if REAL_SETTINGS.getSetting("ClearCache") == "true":
@@ -125,7 +123,11 @@ if xbmcgui.Window(10000).getProperty("PseudoTVRunning") != "True":
             lastfm.delete("%")
             REAL_SETTINGS.setSetting('ClearCache', "false")
             xbmc.executebuiltin("Notification( %s, %s, %d, %s)" % ("PseudoTV Live", "System Cache Cleared", 1000, THUMB) )
-                   
+       
+        #TEMP PTVL SKIN LOCK/Disable art spooling, no longer needed?
+        REAL_SETTINGS.setSetting('SkinSelector', "3")
+        REAL_SETTINGS.setSetting("ArtService_Enabled", "false")
+           
         # Clear BCT Caches
         if REAL_SETTINGS.getSetting("ClearBCT") == "true":
             log('ClearBCT')  
@@ -136,25 +138,32 @@ if xbmcgui.Window(10000).getProperty("PseudoTVRunning") != "True":
             xbmc.executebuiltin("Notification( %s, %s, %d, %s)" % ("PseudoTV Live", 'BCT Cache Cleared', 1000, THUMB) )
             REAL_SETTINGS.setSetting('ClearBCT', "false")
 
-        # Clear Artwork Cache Folders
+        # Clear Artwork Folders
         if REAL_SETTINGS.getSetting("ClearLiveArt") == "true":
             log('ClearLiveArt')  
             try:    
                 # Dynamic Artwork Cache
                 shutil.rmtree(ART_LOC)
                 log('Removed ART_LOC')  
-                REAL_SETTINGS.setSetting('ClearLiveArtCache', "true")
-                # Logo Cache
-                shutil.rmtree(LOGO_CACHE_LOC)   
-                log('Removed LOGO_CACHE_LOC')    
-                # tvdbapi Cache
-                shutil.rmtree(xbmc.translatePath(os.path.join(SETTINGS_LOC,'cache','tvdb_api')))  
-                log('Removed tvdb_api')
-                xbmc.executebuiltin("Notification( %s, %s, %d, %s)" % ("PseudoTV Live", "Artwork Folders Cleared", 1000, THUMB) )
+                REAL_SETTINGS.setSetting('ClearLiveArtCache', "true") 
+                xbmc.executebuiltin("Notification( %s, %s, %d, %s)" % ("PseudoTV Live", "Artwork Folder Cleared", 1000, THUMB) )
             except:
                 pass
             REAL_SETTINGS.setSetting('ClearLiveArt', "false")
             
+        # Clear Artwork Cache
+        if REAL_SETTINGS.getSetting("ClearLiveArtCache") == "true":
+            artwork.delete("%") 
+            artwork1.delete("%")
+            artwork2.delete("%")
+            artwork3.delete("%")
+            artwork4.delete("%")
+            artwork5.delete("%")
+            artwork6.delete("%")
+            log('ArtCache Purged!')
+            REAL_SETTINGS.setSetting('ClearLiveArtCache', "false")
+            xbmc.executebuiltin("Notification( %s, %s, %d, %s)" % ("PseudoTV Live", "Artwork Cache Cleared", 1000, THUMB) )
+
         #Enforce settings
         if LOWPOWER == True:
             #Set Configurations Optimized for LowPower Hardware.
@@ -178,4 +187,4 @@ if xbmcgui.Window(10000).getProperty("PseudoTVRunning") != "True":
         PseudoTV()
 else:
     log('script.pseudotv.live - Already running, exiting', xbmc.LOGERROR)
-    xbmc.executebuiltin("Notification( %s, %s, %d, %s)" % ("PseudoTV Live", "Already running, Try Rebooting!", 1000, THUMB) )
+    xbmc.executebuiltin("Notification( %s, %s, %d, %s)" % ("PseudoTV Live", "Already running" , "Try Rebooting?", 1000, THUMB) )
