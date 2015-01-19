@@ -880,11 +880,13 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
         xbmc.executebuiltin("PlayerControl(repeatall)")
         curtime = time.time()
         timedif = (curtime - self.channels[self.currentChannel - 1].lastAccessTime)
+        
         try:
             chtype = int(ADDON_SETTINGS.getSetting('Channel_' + str(self.currentChannel) + '_type'))
         except:
             chtype = 0
             pass
+            
         self.log('setChannel Chtype = ' + str(chtype))
         
         if self.channels[self.currentChannel - 1].isPaused == False:
@@ -1366,11 +1368,11 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
             
         try:
             if self.showChannelBug == True:                    
-                if chtype != 8:
+                if int(chtype) != 8:
                     setImage = self.Artdownloader.FindBug(chtype, chname, mediapath)
                     self.getControl(103).setImage(setImage)  
                 else:
-                    self.getControl(103).setImage('NA.png')     
+                    self.getControl(103).setImage('NA.png')
             else:
                 self.getControl(103).setImage('NA.png')
         except:

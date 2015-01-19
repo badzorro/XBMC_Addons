@@ -18,7 +18,7 @@
 
 
 import os, re, sys, time, zipfile, threading, requests
-import urllib, urllib2, base64, fileinput, shutil
+import urllib, urllib2, base64, fileinput, shutil, socket
 import xbmc, xbmcgui, xbmcplugin, xbmcvfs, xbmcaddon
 import urlparse, time, string
 
@@ -27,7 +27,12 @@ from FileAccess import FileAccess
 from Queue import Queue
 from HTMLParser import HTMLParser
 
+socket.setdefaulttimeout(30)
+
+
 def requestDownload(url, fle):
+    log('requestDownload')
+    # requests = requests.Session()
     response = requests.get(url, stream=True)
     with open(fle, 'wb') as out_file:
         shutil.copyfileobj(response.raw, out_file)

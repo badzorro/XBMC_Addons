@@ -43,6 +43,8 @@ from datetime import date
 from utils import *
 from datetime import timedelta
 
+socket.setdefaulttimeout(30)
+
 # Commoncache plugin import
 try:
     import StorageServer
@@ -5291,14 +5293,14 @@ class ChannelList:
         
         if filename[0:4] == 'http':
             self.log("findZap2itID, filename http = " + filename)
-            if not self.cached_json_detailed_xmltvChannels:
-                self.cached_json_detailed_xmltvChannels = str(xmltv.read_channels(Open_URL(filename)))
+            # if not self.cached_json_detailed_xmltvChannels:
+            self.cached_json_detailed_xmltvChannels = str(xmltv.read_channels(Open_URL(filename)))
             json_details = self.cached_json_detailed_xmltvChannels
         else:
             self.log("findZap2itID, filename local = " + filename)
             fle = FileAccess.open(filename, "r")
-            if not self.cached_json_detailed_xmltvChannels:
-                self.cached_json_detailed_xmltvChannels = str(xmltv.read_channels(fle))
+            # if not self.cached_json_detailed_xmltvChannels:
+            self.cached_json_detailed_xmltvChannels = str(xmltv.read_channels(fle))
             json_details = self.cached_json_detailed_xmltvChannels
 
         file_detail = re.compile( "{(.*?)}", re.DOTALL ).findall(json_details)
