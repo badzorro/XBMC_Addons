@@ -57,7 +57,7 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
             self.savedRules = False
             self.DirName = ''
             self.PluginSourcePathDir = ''
-            
+            self.LockBrowse = False
             if CHANNEL_SHARING:
                 realloc = REAL_SETTINGS.getSetting('SettingsFolder')
                 FileAccess.copy(realloc + '/settings2.xml', SETTINGS_LOC + '/settings2.xml')
@@ -462,10 +462,12 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
             self.changeListData(self.SourceList, 224, -1)
             self.clearLabel(221)
             self.clearLabel(227)
+            self.LockBrowse = False
         elif controlId == 220:      # InternetTV Source Type, right
             self.changeListData(self.SourceList, 224, 1)
             self.clearLabel(221)
             self.clearLabel(227)
+            self.LockBrowse = False
         
         #Youtube
         elif controlId == 230:      # Youtube Type, left
