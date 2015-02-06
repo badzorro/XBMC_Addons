@@ -17,7 +17,7 @@
 # along with PseudoTV.  If not, see <http://www.gnu.org/licenses/>.
 
 import xbmc, xbmcgui, xbmcaddon
-import subprocess, os, buggalo
+import subprocess, os
 import time, datetime, random
 import threading
 import sys, re
@@ -36,6 +36,12 @@ from urllib import unquote, quote
 from metahandler import metahandlers
 from utils import *
 
+try:
+    import buggalo
+    buggalo.SUBMIT_URL = 'http://pseudotvlive.com/buggalo/submit.php'
+except:
+    pass
+    
 # Commoncache plugin import
 try:
     import StorageServer
@@ -475,8 +481,8 @@ class Artdownloader:
                                     art_type = art_types.group(1).replace("u'",'').replace("'",'').replace("[",'').replace("]",'')
                                     if art_type.lower() == arttype.lower():
                                         if fanPaths and len(fanPaths.group(1)) > 0:
-                                            fanPaths = fanPaths.group(1).replace("u'",'').replace("'",'')
-                                            if fanPaths.startswith('http'):
+                                            fanPath = fanPaths.group(1).replace("u'",'').replace("'",'')
+                                            if fanPath.startswith('http'):
                                                 requestDownload(fanPath,MovieFilePath)
                                                 break                            
                 except:
