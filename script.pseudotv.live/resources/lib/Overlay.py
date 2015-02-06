@@ -206,7 +206,7 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
         self.VideoWindow = False
         self.disableEnd = False
         self.notPlayingAction = 'Up'
-        self.ActionTimeInt = int(REAL_SETTINGS.getSetting("Playback_timeout"))
+        self.ActionTimeInt = int(REAL_SETTINGS.getSetting("ActionTimeInt"))
         self.Browse = ''
         self.showingEPG = False
         REAL_SETTINGS.setSetting('SyncXMLTV_Running', "false")
