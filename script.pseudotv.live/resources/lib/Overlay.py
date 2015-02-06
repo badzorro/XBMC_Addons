@@ -45,7 +45,7 @@ except:
     
 try:
     import buggalo
-    buggalo.SUBMIT_URL = 'http://pseudotvlive.com/buggalo/submit.php'
+    buggalo.SUBMIT_URL = 'http://pseudotvlive.com/buggalo-web/submit.php'
 except:
     pass
        
