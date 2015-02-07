@@ -82,7 +82,7 @@ if xbmcgui.Window(10000).getProperty("PseudoTVRunning") != "True":
     
     if PTVL_Version != __version__:
         ClearPlaylists()
-        REAL_SETTINGS.setSetting('ClearCache', 'true')
+        # REAL_SETTINGS.setSetting('ClearCache', 'true')
         REAL_SETTINGS.setSetting('ForceChannelReset', 'true')
         REAL_SETTINGS.setSetting("PTVL_Version", __version__)
         xbmc.executebuiltin("RunScript("+__cwd__+"/utilities.py,-DDautopatch)")

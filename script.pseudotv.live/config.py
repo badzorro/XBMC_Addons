@@ -967,9 +967,16 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
             self.getControl(272).setLabel(chansetting3)
             self.getControl(273).setLabel(chansetting4)
         elif chantype == 15:
+            try:
+                tmp = chansetting1.split('/')
+                PlugPath = tmp[2]
+                DirPath = "/".join(tmp[3:])
+                self.getControl(280).setLabel(self.pluginNameList[self.findItemLens(self.pluginPathList, PlugPath)])
+                self.getControl(281).setLabel(DirPath)
+            except:
+                pass
             self.getControl(282).setLabel(chansetting1)
-            if len(chansetting2) > 1:
-                self.getControl(283).setLabel(chansetting2)
+            self.getControl(283).setLabel(chansetting2)
             self.getControl(284).setLabel(self.findItemInList(self.MediaLimitList, chansetting3))
             self.getControl(285).setLabel(self.findItemInList(self.SortOrderList, chansetting4))
         elif chantype == 16:
@@ -1030,6 +1037,17 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
 
         if len(thelist) > 0:
             return thelist[0]
+
+        return ''    
+        
+        
+    def findItemLens(self, thelist, item):
+        loitem = item.lower()
+
+        for i in range(len(thelist)):
+            line = (thelist[i]).lower()
+            if line == loitem:
+                return i
 
         return ''
 
