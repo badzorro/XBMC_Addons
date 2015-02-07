@@ -957,17 +957,17 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
         except:
             plugchk = mediapath
             pass
-            
+                  
+        xbmc.sleep(self.channelDelay)
         # Mute the channel before changing
         self.log("setChannel, about to mute");
-        xbmc.executebuiltin("Mute()");           
-        xbmc.sleep(self.channelDelay)
+        xbmc.executebuiltin("Mute()");     
         
         # set the time offset
         self.channels[self.currentChannel - 1].setAccessTime(curtime)
         
         if mediapath[0:4] == 'hdhomerun' or mediapath[0:4] == 'rtmp' or mediapath[0:4] == 'rtsp' or mediapath[0:4] == 'http':
-            #use item player for two reasons, seektime not needed, setInfo fills kodi meta properties.
+            #use item player for two reasons, seektime not needed, setInfo fills kodi player meta properties.
             self.log("setChannel, using listitem player")
             if mediapath[0:4] == 'rtmp' or mediapath[0:4] == 'rtsp':
                 mediapath = (mediapath + ' live=1 timeout=20')    
@@ -986,10 +986,12 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
             # set the show offset
             if self.channels[self.currentChannel - 1].isPaused:
                 self.channels[self.currentChannel - 1].setPaused(False)
-                if plugchk not in BYPASS_SEEK:
+                
+                if chtype != 8 and chtype != 9 and plugchk not in BYPASS_SEEK:
                     self.log("Seeking, paused channel")
                     try:
                         self.Player.seekTime(self.channels[self.currentChannel - 1].showTimeOffset)
+                        
                         if self.channels[self.currentChannel - 1].mode & MODE_ALWAYSPAUSE == 0:
                             self.Player.pause()
 
@@ -1001,29 +1003,32 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
                         pass
                 self.Paused()
             else:  
-                if plugchk not in BYPASS_SEEK:
+            
+                if chtype != 8 and chtype != 9 and plugchk not in BYPASS_SEEK:
                     self.log("Seeking")
                     seektime1 = self.channels[self.currentChannel - 1].showTimeOffset + timedif + int((time.time() - curtime))
                     seektime2 = self.channels[self.currentChannel - 1].showTimeOffset + timedif
-                    overtime = float((int(self.channels[self.currentChannel - 1].getItemDuration(self.channels[self.currentChannel - 1].playlistPosition))/8)*6)
+                    overtime = float((int(self.channels[self.currentChannel - 1].getItemDuration(self.channels[self.currentChannel - 1].playlistPosition))/10)*8)
             
                     if (mediapath[-4:].lower() == 'strm' or mediapath[0:6].lower() == 'plugin'):
                         self.seektime = self.SmartSeek(mediapath, seektime1, seektime2, overtime)
                     else:
                         try:
                             self.Player.seekTime(seektime1)
+                            self.seektime = seektime1
                             self.log("seektime1")
                         except:
                             self.log("Unable to set proper seek time, trying different value")
                             try:
                                 self.Player.seekTime(seektime2)
+                                self.seektime = seektime2
                                 self.log("seektime2")
                             except:
                                 self.log('Exception during seek', xbmc.LOGERROR)
                                 pass 
                                 
-        if self.UPNP:
-            self.PlayUPNP(mediapath, self.seektime)   
+                    if self.UPNP:
+                        self.PlayUPNP(mediapath, self.seektime)   
             
         # if self.Player.ignoreNextStop == True:
             # self.PlayerTimeout(self.ActionTimeInt)
@@ -1892,7 +1897,7 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
         try:
             chtype = int(ADDON_SETTINGS.getSetting('Channel_' + str(self.currentChannel) + '_type'))
         except:
-            chtype = int(ADDON_SETTINGS.getSetting('Channel_' + str(self.currentChannel) + '_type'))
+            chtype = 0
             pass
             
         try:

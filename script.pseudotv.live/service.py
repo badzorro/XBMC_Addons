@@ -47,7 +47,6 @@ def HubSwap(): # Swap Org/Hub versions if 'Hub Installer' found.
                 xbmcvfs.delete(icon + '.png')
                 xbmcvfs.copy(icon + 'HUB', icon + '.png')
                 xbmc.executebuiltin("UpdateLocalAddons")
-                xbmc.executebuiltin("ReloadSkin()")
             except:
                 pass
     else:
@@ -57,7 +56,6 @@ def HubSwap(): # Swap Org/Hub versions if 'Hub Installer' found.
             xbmcvfs.delete(icon + '.png')
             xbmcvfs.copy(icon + 'OEM', icon + '.png')
             xbmc.executebuiltin("UpdateLocalAddons")
-            xbmc.executebuiltin("ReloadSkin()")
         except:
             pass
 
