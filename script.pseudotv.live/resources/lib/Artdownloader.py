@@ -317,9 +317,24 @@ class Artdownloader:
                     self.log("FindArtwork_NEW, setImage = " + setImage)
                     return setImage
                 
-                    
+                
     def SetDefaultArt(self, chname, mpath, arttypeEXT):
-        self.log('SetDefaultArt')
+        xbmc.log("SetDefaultArt Cache")
+        if Cache_Enabled == True: 
+            try:
+                result = artwork.cacheFunction(self.SetDefaultArt_NEW, chname, mpath, arttypeEXT)
+            except:
+                result = self.SetDefaultArt_NEW(chname, mpath, arttypeEXT)
+                pass
+        else:
+            result = self.SetDefaultArt_NEW(chname, mpath, arttypeEXT)
+        if not result:
+            result = THUMB
+        return result  
+
+        
+    def SetDefaultArt_NEW(self, chname, mpath, arttypeEXT):
+        self.log('SetDefaultArt_NEW')
         setImage = ''
         arttype = arttypeEXT.split(".")[0]
         MediaImage = os.path.join(MEDIA_LOC, (arttype + '.png'))
@@ -377,13 +392,12 @@ class Artdownloader:
         setImage = ''
         tvdbAPI = TVDB(TVDB_API_KEY)
         tmdbAPI = TMDB(TMDB_API_KEY)  
+        drive, Dpath = os.path.splitdrive(cachefile)
+        path, filename = os.path.split(Dpath)
         
-        drive, path = os.path.splitdrive(cachefile)
-        path, filename = os.path.split(path)
-        
-        if not FileAccess.exists(path):
-            FileAccess.makedirs(path)
-        
+        if not FileAccess.exists(os.path.join(drive,path)):
+            FileAccess.makedirs(os.path.join(drive,path))   
+                
         if type == 'tvshow':
             self.logDebug('DownloadArt, tvshow')
             FanTVDownload = True
@@ -400,7 +414,7 @@ class Artdownloader:
                         requestDownload(tvdbPath,TVFilePath)
                         FanTVDownload = False
             except Exception,e:
-                print ('DownloadArt, tvdbAPI Failed!') 
+                self.log('DownloadArt, tvdbAPI Failed!')
                 pass
                 
             if FanTVDownload == True:

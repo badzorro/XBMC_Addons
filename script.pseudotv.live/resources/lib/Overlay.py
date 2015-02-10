@@ -35,6 +35,7 @@ from Artdownloader import *
 from upnp import *
 from PVRdownload import *
 from utils import *
+from urllib import unquote, quote
 
 try:
     from PIL import Image
@@ -56,8 +57,7 @@ class MyPlayer(xbmc.Player):
         self.channelList = ChannelList()
         self.stopped = False
         self.ignoreNextStop = False
-    
-    
+        
     def log(self, msg, level = xbmc.LOGDEBUG):
         log('Player: ' + msg, level)
     
@@ -95,14 +95,14 @@ class MyPlayer(xbmc.Player):
     
     def onPlayBackStarted(self):
         self.log('onPlayBackStarted')
+        self.overlay.seektime = 0
         self.resume_playback()
-        PlaybackStatus = self.PlaybackValid()
+        self.PlayBackStarted = self.PlaybackValid()
         
-        if PlaybackStatus:
-            self.overlay.seektime = 0
+        if self.PlayBackStarted:
             file = xbmc.Player().getPlayingFile()
             file = file.replace("\\\\","\\")
-            
+
             if self.overlay.seektime == 0:
                 self.overlay.seektime = xbmc.Player().getTime()
                 
@@ -118,6 +118,7 @@ class MyPlayer(xbmc.Player):
                     UPNP3 = SendUPNP(IPP3, file, self.overlay.seektime)
             except Exception: 
                 buggalo.onExceptionRaised()
+                
         # else:
             # self.log('onPlayBackStarted, PlaybackStatus False Stopping Playback')
             # json_query = '{"jsonrpc":"2.0","method":"Input.ExecuteAction","params":{"action":"stop"},"id":1}'
@@ -126,6 +127,7 @@ class MyPlayer(xbmc.Player):
             
     def onPlayBackEnded(self):
         self.log('onPlayBackEnded') 
+        #Force next playlist item after impromptu play selection
         if self.overlay.OnDemand == True:
             self.overlay.OnDemand = False  
             xbmc.executebuiltin("PlayerControl(SmallSkipForward)")
@@ -134,6 +136,7 @@ class MyPlayer(xbmc.Player):
     def onPlayBackStopped(self):
         if self.stopped == False:
             self.log('Playback stopped')
+            #Force next playlist item after impromptu play selection
             if self.overlay.OnDemand == True:
                 self.overlay.OnDemand = False
                 xbmc.executebuiltin("PlayerControl(SmallSkipForward)")
@@ -197,6 +200,7 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
         self.PVRmediapath = ''
         self.PVRchname = ''
         self.PVRtitle = ''
+        self.PVRsetitle = ''
         self.PVRdbid = ''
         self.PVRid  = ''
         self.PVRtype = ''
@@ -842,6 +846,7 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
         json_query = ('{"jsonrpc": "2.0", "method": "JSONRPC.NotifyAll", "params": {"sender":"PTVL","message":"PseudoTV_Live: Channel Name - %s"}, "id": 1}' % (chname))
         self.channelList.sendJSON(json_query)
         
+        #Force next playlist item after impromptu play selection
         if self.OnDemand == True:
             self.OnDemand = False
             
@@ -1170,7 +1175,11 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
         except:   
             pass
             
-        if self.hideShortItems and self.infoOffset != 0:
+        if self.OnDemand == True:
+            position = -999
+            mediapath = self.Player.getPlayingFile()
+            
+        elif self.hideShortItems and self.infoOffset != 0:
             position = xbmc.PlayList(xbmc.PLAYLIST_MUSIC).getposition()
             curoffset = 0
             modifier = 1
@@ -1185,12 +1194,7 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
                     curoffset += 1
                     
             mediapath = (self.channels[self.currentChannel - 1].getItemFilename(position))
-        
-        elif self.OnDemand == True:
-            print 'self.OnDemand'
-            position = -999
-            mediapath = self.Browse
-        
+
         else:
             #same logic as in setchannel; loop till we get the current show
             if chtype == 8:
@@ -1213,38 +1217,32 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
                     position = self.channels[self.currentChannel - 1].playlistPosition
             else: #original code
                 position = xbmc.PlayList(xbmc.PLAYLIST_MUSIC).getposition() + self.infoOffset
-        self.log('setShowInfo, setshowposition = ' + str(position)) 
-        
-        #Artwork Handling
-        mediapath = (self.channels[self.currentChannel - 1].getItemFilename(position))       
+            mediapath = (self.channels[self.currentChannel - 1].getItemFilename(position))   
+        self.log('setShowInfo, setshowposition = ' + str(position))  
         chname = (self.channels[self.currentChannel - 1].name)
         self.SetMediaInfo(chtype, chname, mediapath, position)
         
         
     def SetMediaInfo(self, chtype, chname, mediapath, position):
         self.log('SetMediaInfo')  
-        # tmpstr = self.GetFileInfo(mediapath)
-        # use xbmc player info todo
-        # compare to ptvl to detect ondemand?
+
+        #OnDemand Set Player info, else Playlist
         if position == -999:
-            #Core OnDemand Info
-            genre = 'Unknown'
-            title = 'OnDemand'
-            LiveID  = 'tvshow|0|0|False|1|NR|'
-            EpisodeTitle = 'OnDemand'
-            SEtitle = 'OnDemand'
-            Description = tmpstr
-            self.getControl(506).setImage(os.path.join(IMAGES_LOC,'Default.png'))
+            tmpstr = (self.GetPlayingItem()).split('//')
+            title = tmpstr[0]
+            SEtitle = (tmpstr[1] + ' [COLOR=%s][B]OnDemand[/B][/COLOR]' % ((self.channelbugcolor).replace('0x','')))
+            Description = tmpstr[2]
+            genre = tmpstr[3]
+            LiveID = self.channelList.unpackLiveID(tmpstr[5])
+            self.getControl(506).setImage(IMAGES_LOC + 'label_ondemand.png')
         else:
-            #Core Playlist Info
-            genre = (self.channels[self.currentChannel - 1].getItemgenre(position))
             title = (self.channels[self.currentChannel - 1].getItemTitle(position))
-            LiveID = (self.channels[self.currentChannel - 1].getItemLiveID(position))
-            EpisodeTitle = (self.channels[self.currentChannel - 1].getItemEpisodeTitle(position))
             SEtitle = self.channels[self.currentChannel - 1].getItemEpisodeTitle(position)
             Description = (self.channels[self.currentChannel - 1].getItemDescription(position))
-            self.getControl(506).setImage(self.channelLogos + (self.channels[self.currentChannel - 1].name) + '.png') 
+            genre = (self.channels[self.currentChannel - 1].getItemgenre(position))
+            LiveID = (self.channels[self.currentChannel - 1].getItemLiveID(position))
             LiveID = self.channelList.unpackLiveID(LiveID)
+            self.getControl(506).setImage(self.channelLogos + (self.channels[self.currentChannel - 1].name) + '.png') 
             
         try:
             if self.showSeasonEpisode:
@@ -1263,7 +1261,7 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
         self.getControl(503).setLabel((title).replace("*NEW*",""))
         self.getControl(504).setLabel(swtitle)
         self.getControl(505).setLabel(Description)
-        
+
         ##LIVEID##
         type = LiveID[0]
         id = LiveID[1]
@@ -1276,6 +1274,7 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
         self.PVRmediapath = mediapath
         self.PVRchname = chname
         self.PVRtitle = title
+        self.PVRsetitle = SEtitle
         self.PVRtype = type
         self.PVRdbid = dbid
         self.PVRid = id
@@ -1398,7 +1397,7 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
                 self.channelLabel[curlabel].setImage(IMAGES_LOC + 'label_' + str((channel % 100) // 10) + '.png')
             self.channelLabel[curlabel].setVisible(True)
             curlabel += 1
-            
+        
         if FileAccess.exists(IMAGES_LOC):
             self.channelLabel[curlabel].setImage(IMAGES_LOC + 'label_' + str(channel % 10) + '.png')
         self.channelLabel[curlabel].setVisible(True)
@@ -1413,14 +1412,10 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
             self.channelList.sendJSON(json_query);
             
         try:
-            if self.showChannelBug == True:                    
+            setImage = 'NA.png'
+            if self.showChannelBug == True:
                 if int(chtype) != 8:
-                    setImage = self.Artdownloader.FindBug(chtype, chname, mediapath)
-                    self.getControl(103).setImage(setImage)  
-                else:
-                    self.getControl(103).setImage('NA.png')
-            else:
-                self.getControl(103).setImage('NA.png')
+                    self.getControl(103).setImage(self.Artdownloader.FindBug(chtype, chname, mediapath))
         except:
             pass
                 
@@ -1602,10 +1597,10 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
            
             #Set button labels n logo
             self.getControl(995).setImage(THUMB)
-            self.getControl(997).setLabel('Now Playing')
+            self.getControl(997).setLabel('Now Watching')
             self.getControl(998).setLabel('OnNow')
             self.getControl(999).setLabel('OnDemand')
-            self.getControl(1000).setLabel('NextAired')
+            self.getControl(1000).setLabel('Search')
             self.getControl(1001).setLabel('')
             self.getControl(1002).setLabel('')
             self.getControl(1003).setLabel('EPGType')
@@ -1613,8 +1608,8 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
             self.getControl(1005).setLabel('Mute')
             self.getControl(1006).setLabel('Subtitle')
             self.getControl(1007).setLabel('Player Control')
-            self.getControl(1008).setLabel('Sleep')
-            self.getControl(1009).setLabel('')
+            self.getControl(1008).setLabel('')
+            self.getControl(1009).setLabel('Sleep')
             self.getControl(1010).setLabel('Exit')
                 
             if not self.showingMenu:      
@@ -1795,27 +1790,45 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
         elif controlId == 999:
             if self.showingMenu:
                 self.log("OnDemand")
-                self.pauseMenu()
+                self.hideMenu()
                 extTypes = ['.avi', '.flv', '.mkv', '.mp4', '.strm', '.ts']
                 self.Browse = dlg.browse(1,'OnDemand', 'video', '.avi|.flv|.mkv|.mp4|.strm|.ts', True, True, 'special://videoplaylists')
                 if (self.Browse)[-4:].lower() in extTypes:
                     self.log("onClick, OnDemand = " + self.Browse)
-                    self.Player.play(self.Browse)
                     self.OnDemand = True
-                    self.hideMenu()
+                    self.getControl(103).setImage(IMAGES_LOC + 'Default_ondemand.png')
+                    self.Player.play(self.Browse)
+                    self.showInfo(self.InfTimer)
                 else:
                     self.showMenu(self.InfTimer)
                 
         elif controlId == 1000:
             if self.showingMenu:
+                self.log("Search")
+                self.hideMenu()
+                file = self.Player.getPlayingFile()
+                xbmc.executebuiltin("RunScript(script.globalsearch)")
+                
+                while not self.OnDemand:
+                    if file != self.Player.getPlayingFile():
+                        self.OnDemand = True
+                        self.getControl(103).setImage(IMAGES_LOC + 'Default_ondemand.png')
+                        self.showInfo(self.InfTimer)
+                        self.actionSemaphore.release()
+                        return
+                self.showMenu(self.InfTimer)
+                        
+        elif controlId == 1001:
+            if self.showingMenu:
                 self.log("NextAired")
                 # self.hideMenu()  
                 # self.showingNextAired = True
                 # xbmc.executebuiltin("RunScript(script.tv.show.next.aired)")
-                
-        elif controlId == 1001:
-            if self.showingMenu:
-                self.log("")
+                # if self.Player.PlayBackStarted:
+                    # self.OnDemand = True
+                    # self.showInfo(self.InfTimer)
+                # else:
+                    # self.showMenu(self.InfTimer)  
                     
         elif controlId == 1002:
             if self.showingMenu:
@@ -1858,17 +1871,18 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
                     
         elif controlId == 1008:
             if self.showingMenu:
+                self.log("")
+                    
+        elif controlId == 1009:
+            if self.showingMenu:
                 self.log("Sleep")
                 self.pauseMenu()
                 self.SleepButton()    
                 self.showMenu(self.InfTimer)       
-                    
-        elif controlId == 1009:
-            if self.showingMenu:
-                self.log("Settings")
-                self.pauseMenu()
-                xbmcaddon.Addon(id='script.pseudotv.live').openSettings()
-                self.showMenu(self.InfTimer)
+                # self.log("Settings")
+                # self.pauseMenu()
+                # xbmcaddon.Addon(id='script.pseudotv.live').openSettings()
+                # self.showMenu(self.InfTimer)
                 
         elif controlId == 1010:
             if self.showingMenu:
@@ -2560,8 +2574,183 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
             self.setChannel(channel)
     
     
-    def KillAutoJump():
+    def KillAutoJump(self):
         xbmc.executebuiltin("Dialog.Close(PseudoTV Live)")
+        
+        
+    def GetPlayingItem(self):
+        self.log('GetPlayingItem') 
+        json_query = ('{"jsonrpc":"2.0","method":"Player.GetItem","params":{"playerid":1,"properties":["title","year","mpaa","imdbnumber","description","season","episode","playcount","genre","duration","runtime","showtitle","album","artist","plot","plotoutline","tagline"]}, "id": 1}')
+        json_folder_detail = self.channelList.sendJSON(json_query)
+        file_detail = re.compile( "{(.*?)}", re.DOTALL ).findall(json_folder_detail)
+        print file_detail
+        for f in file_detail:
+            tmpstr = ''
+            istvshow = False
+            Managed = False          
+            # try:
+            seasonval = -1
+            epval = -1
+            titles = re.search('"label" *: *"(.*?)"', f)
+            showtitles = re.search('"showtitle" *: *"(.*?)"', f)
+            plots = re.search('"plot" *: *"(.*?)",', f)
+            plotoutlines = re.search('"plotoutline" *: *"(.*?)",', f)
+            years = re.search('"year" *: *([\d.]*\d+)', f)
+            genres = re.search('"genre" *: *\[(.*?)\]', f)
+            playcounts = re.search('"playcount" *: *([\d.]*\d+),', f)
+            imdbnumbers = re.search('"imdbnumber" *: *"(.*?)"', f)
+            ratings = re.search('"mpaa" *: *"(.*?)"', f)
+            descriptions = re.search('"description" *: *"(.*?)"', f)
+            
+            if showtitles != None and len(showtitles.group(1)) > 0:
+                type = 'tvshow'
+                dbids = re.search('"tvshowid" *: *([\d.]*\d+),', f)   
+            else:
+                type = 'movie'
+                dbids = re.search('"id" *: *([\d.]*\d+),', f)
+
+            # if possible find year by title
+            if years == None and len(years.group(1)) == 0:
+                try:
+                    year = int(((showtitles.group(1)).split(' ('))[1].replace(')',''))
+                except Exception,e:
+                    try:
+                        year = int(((titles.group(1)).split(' ('))[1].replace(')',''))
+                    except:
+                        year = 0
+                        pass
+            else:
+                year = 0
+                
+            if genres != None and len(genres.group(1)) > 0:
+                genre = ((genres.group(1).split(',')[0]).replace('"',''))
+            else:
+                genre = 'Unknown'
+            
+            if playcounts != None and len(playcounts.group(1)) > 0:
+                playcount = playcounts.group(1)
+            else:
+                playcount = 1
+    
+            if ratings != None and len(ratings.group(1)) > 0:
+                rating = self.channelList.cleanRating(ratings.group(1))
+                if type == 'movie':
+                    rating = rating[0:5]
+                    try:
+                        rating = rating.split(' ')[0]
+                    except:
+                        pass
+            else:
+                rating = 'NR'
+            
+            if imdbnumbers != None and len(imdbnumbers.group(1)) > 0:
+                imdbnumber = imdbnumbers.group(1)
+            else:
+                imdbnumber = 0
+                
+            if dbids != None and len(dbids.group(1)) > 0:
+                dbid = dbids.group(1)
+            else:
+                dbid = 0
+
+            if plots != None and len(plots.group(1)) > 0:
+                theplot = (plots.group(1)).replace('\\','').replace('\n','')
+            elif descriptions != None and len(descriptions.group(1)) > 0:
+                theplot = (descriptions.group(1)).replace('\\','').replace('\n','')
+            else:
+                theplot = (titles.group(1)).replace('\\','').replace('\n','')
+            
+            try:
+                theplot = (self.channelList.trim(theplot, 350, '...'))
+            except Exception,e:
+                self.log("Plot Trim failed" + str(e))
+                theplot = (theplot[:350])
+
+            # This is a TV show
+            if showtitles != None and len(showtitles.group(1)) > 0:
+                season = re.search('"season" *: *(.*?),', f)
+                episode = re.search('"episode" *: *(.*?),', f)
+                swtitle = (titles.group(1)).replace('\\','')
+                swtitle = (swtitle.split('.', 1)[-1]).replace('. ','')
+                
+                try:
+                    seasonval = int(season.group(1))
+                    epval = int(episode.group(1))
+                    swtitle = (('0' if seasonval < 10 else '') + str(seasonval) + 'x' + ('0' if epval < 10 else '') + str(epval) + ' - ' + (swtitle)).replace('  ',' ')
+                except Exception,e:
+                    self.log("Season/Episode formatting failed" + str(e))
+                    seasonval = -1
+                    epval = -1
+
+                if REAL_SETTINGS.getSetting('EnhancedGuideData') == 'true':  
+                    print 'EnhancedGuideData' 
+
+                    if imdbnumber == 0:
+                        imdbnumber = self.channelList.getTVDBID(showtitles.group(1), year)
+                            
+                    if genre == 'Unknown':
+                        genre = (self.channelList.getGenre(type, showtitles.group(1), year))
+                        
+                    if rating == 'NR':
+                        rating = (self.channelList.getRating(type, showtitles.group(1), year, imdbnumber))
+
+                    if imdbnumber != 0:
+                        Managed = self.channelList.sbManaged(imdbnumber)
+
+                GenreLiveID = [genre, type, imdbnumber, dbid, Managed, playcount, rating] 
+                genre, LiveID = self.channelList.packGenreLiveID(GenreLiveID)
+                tmpstr += (showtitles.group(1)) + "//" + swtitle + "//" + theplot + "//" + genre + "////" + (LiveID)
+                istvshow = True
+            else:
+                if year != 0:
+                    try:
+                        tmpstr += titles.group(1) + ' (' + str(year) + ')' + "//"
+                    except:
+                        tmpstr += titles.group(1) + "//"
+                        pass    
+                else:
+                    tmpstr += titles.group(1) + "//"
+                    
+                album = re.search('"album" *: *"(.*?)"', f)
+
+                # This is a movie
+                if not album or len(album.group(1)) == 0:
+                    taglines = re.search('"tagline" *: *"(.*?)"', f)
+                    
+                    if taglines != None and len(taglines.group(1)) > 0:
+                        tmpstr += (taglines.group(1)).replace('\\','')
+                    
+                    if REAL_SETTINGS.getSetting('EnhancedGuideData') == 'true':     
+                    
+                        if imdbnumber == 0:
+                            imdbnumber = self.channelList.getIMDBIDmovie(titles.group(1), year)
+
+                        if genre == 'Unknown':
+                            genre = (self.channelList.getGenre(type, titles.group(1), year))
+
+                        if rating == 'NR':
+                            rating = (self.channelList.getRating(type, titles.group(1), year, imdbnumber))
+
+                    if imdbnumber != 0:
+                        Managed = self.channelList.cpManaged(titles.group(1), imdbnumber)
+                            
+                    GenreLiveID = [genre, type, imdbnumber, dbid, Managed, playcount, rating]
+                    genre, LiveID = self.channelList.packGenreLiveID(GenreLiveID)           
+                    tmpstr += "//" + theplot + "//" + (genre) + "////" + (LiveID)
+                
+                else: #Music
+                    LiveID = 'music|0|0|False|1|NR|'
+                    artist = re.search('"artist" *: *"(.*?)"', f)
+                    tmpstr += album.group(1) + "//" + artist.group(1) + "//" + 'Music' + "////" + LiveID
+            
+            tmpstr = tmpstr
+            tmpstr = tmpstr.replace("\\n", " ").replace("\\r", " ").replace("\\\"", "\"")
+            tmpstr = tmpstr
+            # except Exception,e:
+                # self.log('GetPlayingItem, failed...' + str(e))
+                # pass
+        print 'tmpstr', tmpstr
+        return tmpstr
         
         
     def SyncXMLTV(self):
@@ -2596,170 +2785,6 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
             xbmc.executebuiltin("Notification( %s, %s, %d, %s)" % ("PseudoTV Live", "EPG Color Disabled", 1000, THUMB) )
       
       
-    def GetFileInfo(self, mediapath, FleType='video'):
-        self.log('GetFileInfo')     
-        file_detail = []
-        json_query = uni('{"jsonrpc": "2.0", "method": "Files.GetFileDetails", "params": {"file": "%s", "media": "%s", "properties":["title","year","mpaa","imdbnumber","description","season","episode","playcount","genre","duration","runtime","showtitle","album","artist","plot","plotoutline","tagline"]}, "id": 23}' % (mediapath, FleType))
-        json_folder_detail = self.channelList.sendJSON(json_query)
-        file_detail = re.compile( "{(.*?)}", re.DOTALL ).findall(json_folder_detail)
-
-        for f in file_detail:
-            match = re.search('"filedetails" *: *"(.*?)",', f)
-            istvshow = False
-
-            if match:
-                duration = re.search('"duration" *: *([0-9]*?),', f)
-                titles = re.search('"label" *: *"(.*?)"', f)
-                showtitles = re.search('"showtitle" *: *"(.*?)"', f)
-                plots = re.search('"plot" *: *"(.*?)",', f)
-                plotoutlines = re.search('"plotoutline" *: *"(.*?)",', f)
-                years = re.search('"year" *: *([0-9]*?)', f)
-                genres = re.search('"genre" *: *\[(.*?)\]', f)
-                playcounts = re.search('"playcount" *: *([0-9]*?),', f)
-                imdbnumbers = re.search('"imdbnumber" *: *"(.*?)"', f)
-                ratings = re.search('"mpaa" *: *"(.*?)"', f)
-                descriptions = re.search('"description" *: *"(.*?)"', f)
-                            
-                if showtitles != None and len(showtitles.group(1)) > 0:
-                    type = 'tvshow'
-                    dbids = re.search('"tvshowid" *: *([0-9]*?),', f)    
-                else:
-                    type = 'movie'
-                    dbids = re.search('"movieid" *: *([0-9]*?),', f)
-                
-                if years == None and len(years.group(1)) == 0:
-                    try:
-                        year = int(((showtitles.group(1)).split(' ('))[1].replace(')',''))
-                    except Exception,e:
-                        try:
-                            year = int(((titles.group(1)).split(' ('))[1].replace(')',''))
-                        except:
-                            year = 0
-                            pass
-                else:
-                    year = 0
-                    
-                if genres != None and len(genres.group(1)) > 0:
-                    genre = ((genres.group(1).split(',')[0]).replace('"',''))
-                else:
-                    genre = 'Unknown'
-                
-                if playcounts != None and len(playcounts.group(1)) > 0:
-                    playcount = playcounts.group(1)
-                else:
-                    playcount = 1
-        
-                if ratings != None and len(ratings.group(1)) > 0:
-                    rating = self.channelList.cleanRating(ratings.group(1))
-                    if type == 'movie':
-                        rating = rating[0:5]
-                        try:
-                            rating = rating.split(' ')[0]
-                        except:
-                            pass
-                else:
-                    rating = 'NR'
-                
-                if imdbnumbers != None and len(imdbnumbers.group(1)) > 0:
-                    imdbnumber = imdbnumbers.group(1)
-                else:
-                    imdbnumber = 0
-                    
-                if dbids != None and len(dbids.group(1)) > 0:
-                    dbid = dbids.group(1)
-                else:
-                    dbid = 0
-
-                if plots != None and len(plots.group(1)) > 0:
-                    theplot = (plots.group(1)).replace('\\','').replace('\n','')
-                elif descriptions != None and len(descriptions.group(1)) > 0:
-                    theplot = (descriptions.group(1)).replace('\\','').replace('\n','')
-                else:
-                    theplot = (titles.group(1)).replace('\\','').replace('\n','')
-                
-                try:
-                    theplot = (self.channelList.trim(theplot, 350, '...'))
-                except Exception,e:
-                    self.log("Plot Trim failed" + str(e))
-                    theplot = (theplot[:350])
-
-                # This is a TV show
-                if showtitles != None and len(showtitles.group(1)) > 0:
-                    season = re.search('"season" *: *(.*?),', f)
-                    episode = re.search('"episode" *: *(.*?),', f)
-                    swtitle = (titles.group(1)).replace('\\','')
-                    swtitle = (swtitle.split('.', 1)[-1]).replace('. ','')
-                    
-                    try:
-                        seasonval = int(season.group(1))
-                        epval = int(episode.group(1))
-                        swtitle = (('0' if seasonval < 10 else '') + str(seasonval) + 'x' + ('0' if epval < 10 else '') + str(epval) + ' - ' + (swtitle)).replace('  ',' ')
-                    except Exception,e:
-                        self.log("Season/Episode formatting failed" + str(e))
-                        seasonval = -1
-                        epval = -1
-
-                    if REAL_SETTINGS.getSetting('EnhancedGuideData') == 'true':  
-                        print 'EnhancedGuideData' 
-
-                        if imdbnumber == 0:
-                            imdbnumber = self.channelList.getTVDBID(showtitles.group(1), year)
-                                
-                        if genre == 'Unknown':
-                            genre = (self.channelList.getGenre(type, showtitles.group(1), year))
-                            
-                        if rating == 'NR':
-                            rating = (self.channelList.getRating(type, showtitles.group(1), year, imdbnumber))
-
-                        if imdbnumber != 0:
-                            Managed = self.channelList.sbManaged(imdbnumber)
-
-                    GenreLiveID = [genre, type, imdbnumber, dbid, Managed, playcount, rating] 
-                    genre, LiveID = self.channelList.packGenreLiveID(GenreLiveID)
-                    
-                    tmpstr += (showtitles.group(1)) + "//" + swtitle + "//" + theplot + "//" + genre + "////" + (LiveID)
-                    istvshow = True
-
-                else:
-                    if year != 0:
-                        tmpstr += titles.group(1) + ' (' + str(year) + ')' + "//"
-                    else:
-                        tmpstr += titles.group(1) + "//"
-                        
-                    album = re.search('"album" *: *"(.*?)"', f)
-
-                    # This is a movie
-                    if not album or len(album.group(1)) == 0:
-                        taglines = re.search('"tagline" *: *"(.*?)"', f)
-                        
-                        if taglines != None and len(taglines.group(1)) > 0:
-                            tmpstr += (taglines.group(1)).replace('\\','')
-                        
-                        if REAL_SETTINGS.getSetting('EnhancedGuideData') == 'true':     
-                        
-                            if imdbnumber == 0:
-                                imdbnumber = self.channelList.getIMDBIDmovie(titles.group(1), year)
-
-                            if genre == 'Unknown':
-                                genre = (self.channelList.getGenre(type, titles.group(1), year))
-
-                            if rating == 'NR':
-                                rating = (self.channelList.getRating(type, titles.group(1), year, imdbnumber))
-
-                        if imdbnumber != 0:
-                            Managed = self.channelList.cpManaged(titles.group(1), imdbnumber)
-                                
-                        GenreLiveID = [genre, type, imdbnumber, dbid, Managed, playcount, rating]
-                        genre, LiveID = self.channelList.packGenreLiveID(GenreLiveID)           
-                        tmpstr += "//" + theplot + "//" + (genre) + "////" + (LiveID)
-                    
-                    else: #Music
-                        LiveID = 'music|0|0|False|1|NR|'
-                        artist = re.search('"artist" *: *"(.*?)"', f)
-                        tmpstr += album.group(1) + "//" + artist.group(1) + "//" + 'Music' + "////" + LiveID
-        return tmpstr
-         
-         
     def PreArtService(self):
         self.log('PreArtService')
         # ADDON_SETTINGS.loadSettings()
@@ -2770,23 +2795,18 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
         ArtLST = []
         
         for i in range(999):
-            chtype = -1
-            id = -1
-            type = ''
-            mpath = ''
-            
             try:
-                chtype = int(ADDON_SETTINGS.getSetting('Channel_' + str(i + 1) + '_type'))
-                chname = (self.channels[i + 1].name)
-                fle = xbmc.translatePath(os.path.join(LOCK_LOC, ("channel_" + str(i + 1) + '.m3u')))
-            except:
-                chtype = 0
-                chname = ''
-                fle = ''
-                pass
-                
-            if chtype >= 0 and fle != '':
                 try:
+                    chtype = int(ADDON_SETTINGS.getSetting('Channel_' + str(i) + '_type'))
+                    chname = (self.channels[i - 1].name)
+                    fle = xbmc.translatePath(os.path.join(LOCK_LOC, ("channel_" + str(i) + '.m3u')))  
+                    print chtype, chname, fle
+                except Exception,e:
+                    chtype = -1
+                    fle = ''
+                    pass
+                
+                if chtype >= 0 and fle != '':
                     if FileAccess.exists(fle):
                         f = FileAccess.open(fle, 'r')
                         lineLST = f.readlines()
@@ -2815,9 +2835,9 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
                                     if type and mpath:
                                         newLST = [type, chtype, chname, id, dbid, mpath]
                                         ArtLST.append(newLST)
-                except:
-                    pass
-                    
+            except Exception,e:
+                print e
+                pass
         # shuffle list to evenly distribute queue
         random.shuffle(ArtLST)
         self.log('PreArtService, ArtLST Count = ' + str(len(ArtLST)))

@@ -117,21 +117,11 @@ SETTINGS_LOC = REAL_SETTINGS.getAddonInfo('profile') #LOCKED
 CHANNELS_LOC = os.path.join(SETTINGS_LOC, 'cache') + '/' #LOCKED
 MADE_CHAN_LOC = os.path.join(CHANNELS_LOC, 'stored') + '/' #LOCKED
 GEN_CHAN_LOC = os.path.join(CHANNELS_LOC, 'generated') + '/' #LOCKED
-LOCK_LOC = xbmc.translatePath(os.path.join(SETTINGS_LOC, 'cache')) + '/' #LOCKED
 PVR_DOWNLOAD_LOC = xbmc.translatePath(os.path.join(REAL_SETTINGS.getSetting('PVR_Folder'))) #PVR Download location
-ART_LOC = xbmc.translatePath(os.path.join(SETTINGS_LOC, 'cache', 'artwork')) + '/' #Missing Artwork cache location
 LOGO_LOC = xbmc.translatePath(REAL_SETTINGS.getSetting('ChannelLogoFolder')) #Channel Logo location
-EPGGENRE_CACHE_LOC = xbmc.translatePath(os.path.join(SETTINGS_LOC, 'cache', 'epg-genres')) + '/' #Post EPG IMG Processing location for future use!
 IMAGES_LOC = xbmc.translatePath(os.path.join(ADDON_PATH, 'resources', 'images')) + '/'
 XMLTV_LOC = xbmc.translatePath(os.path.join(REAL_SETTINGS.getSetting('xmltvLOC'))) + '/'
-XMLTV_CACHE_LOC = xbmc.translatePath(os.path.join(SETTINGS_LOC, 'cache', 'xmltv')) + '/'
-STRM_CACHE_LOC = xbmc.translatePath(os.path.join(SETTINGS_LOC, 'cache', 'strm','')) 
 PTVL_SKIN_LOC = os.path.join(ADDON_PATH, 'resources', 'skins') #Path to PTVL Skin folder
-
-#XMLTV FILENAMES
-USTVnowXML = (os.path.join(XMLTV_CACHE_LOC, 'ustvnow.xml'))
-SSTVXML = (os.path.join(XMLTV_CACHE_LOC, 'smoothstreams.xml'))
-FTVXML = (os.path.join(XMLTV_CACHE_LOC, 'ftvguide.xml'))
 
 #BASEURL
 USERPASS = REAL_SETTINGS.getSetting('Donor_UP')
@@ -154,8 +144,22 @@ THUMB = (IMAGES_LOC + 'icon.png')
 if REAL_SETTINGS.getSetting('ChannelSharing') == "true":
     CHANNEL_SHARING = True
     LOCK_LOC = xbmc.translatePath(os.path.join(REAL_SETTINGS.getSetting('SettingsFolder'), 'cache')) + '/'
+    XMLTV_CACHE_LOC = xbmc.translatePath(os.path.join(REAL_SETTINGS.getSetting('SettingsFolder'), 'cache', 'xmltv')) + '/'
+    STRM_CACHE_LOC = xbmc.translatePath(os.path.join(REAL_SETTINGS.getSetting('SettingsFolder'), 'cache', 'strm','')) 
+    EPGGENRE_CACHE_LOC = xbmc.translatePath(os.path.join(REAL_SETTINGS.getSetting('SettingsFolder'), 'cache', 'epg-genres')) + '/' #Post EPG IMG Processing location for future use!
+    ART_LOC = xbmc.translatePath(os.path.join(REAL_SETTINGS.getSetting('SettingsFolder'), 'cache', 'artwork')) + '/' #Missing Artwork cache location
 else:
-    CHANNEL_SHARING = False
+    CHANNEL_SHARING = False  
+    LOCK_LOC = xbmc.translatePath(os.path.join(SETTINGS_LOC, 'cache')) + '/'
+    XMLTV_CACHE_LOC = xbmc.translatePath(os.path.join(SETTINGS_LOC, 'cache', 'xmltv')) + '/'
+    STRM_CACHE_LOC = xbmc.translatePath(os.path.join(SETTINGS_LOC, 'cache', 'strm','')) 
+    EPGGENRE_CACHE_LOC = xbmc.translatePath(os.path.join(SETTINGS_LOC, 'cache', 'epg-genres')) + '/' #Post EPG IMG Processing location for future use!
+    ART_LOC = xbmc.translatePath(os.path.join(SETTINGS_LOC, 'cache', 'artwork')) + '/' #Missing Artwork cache location
+      
+#XMLTV FILENAMES
+USTVnowXML = (os.path.join(XMLTV_CACHE_LOC, 'ustvnow.xml'))
+SSTVXML = (os.path.join(XMLTV_CACHE_LOC, 'smoothstreams.xml'))
+FTVXML = (os.path.join(XMLTV_CACHE_LOC, 'ftvguide.xml'))
       
 # SKIN SELECT
 if int(REAL_SETTINGS.getSetting('SkinSelector')) == 1:

@@ -98,9 +98,7 @@ class ChannelList:
         self.cached_json_detailed_TV = []
         self.cached_json_detailed_Movie = []
         self.cached_json_detailed_trailers = []  
-        self.cached_json_detailed_xmltvChannels_http = []
         self.cached_json_detailed_xmltvChannels_pvr = []
-        self.cached_json_detailed_xmltvChannels_local = []
         self.videoParser = VideoParser()
         self.httpJSON = True
         self.autoplaynextitem = False
@@ -112,8 +110,12 @@ class ChannelList:
         self.enteredChannelCount = 0
         self.background = True
         self.seasonal = False
-        self.limit = MEDIA_LIMIT[int(REAL_SETTINGS.getSetting('MEDIA_LIMIT'))]
         self.Override_ok = REAL_SETTINGS.getSetting('Override_ok') == "true"
+        try:
+            self.limit = MEDIA_LIMIT[int(REAL_SETTINGS.getSetting('MEDIA_LIMIT'))]
+        except:
+            self.log('Channel Media Limit Failed!')
+            self.limit = 25
         self.log('Channel Media Limit is ' + str(self.limit))
         random.seed() 
 
@@ -2586,7 +2588,7 @@ class ChannelList:
         showList = []
         showcount = 0
         stop = 0
-       
+        YTMSG = setting1
         if self.youtube_ok != False:
         
             if setting3 == '':
@@ -5373,9 +5375,38 @@ class ChannelList:
             self.log("Unable to get the playlist type.", xbmc.LOGERROR)
             return ''
             
+            
+    def readXMLTV(self, fle, filename):
+        xbmc.log("readXMLTV Cache")
+        if Cache_Enabled == True: 
+            try:
+                result = quarterly.cacheFunction(self.readXMLTV_NEW, fle, filename)
+            except:
+                result = self.readXMLTV_NEW(fle, filename)
+                pass
+        else:
+            result = self.readXMLTV_NEW(fle, filename)
+        if not result:
+            result = []
+        return result  
         
+            
+    def readXMLTV_NEW(self, fle, filename):
+        self.log('readXMLTV_NEW')
+        try:
+            channels = str(xmltv.read_channels(fle)) 
+            print channels
+        except:
+            channels = "[{'display-name': [('XMLTV ERROR', '')], 'id': 'IMPROPER FORMATING'}]"
+            pass
+        return channels     
+        
+
     def findZap2itID(self, CHname, filename):
+        if not CHname:
+            CHname = 'Unknown'
         self.log("findZap2itID, CHname = " + CHname)
+        xbmc.executebuiltin( "ActivateWindow(busydialog)" )
         orgCHname = CHname
         XMLTVMatchlst = []
         sorted_XMLTVMatchlst = []
@@ -5408,20 +5439,10 @@ class ChannelList:
             else:
                 if filename[0:4] == 'http':
                     self.log("findZap2itID, filename http = " + filename)
-                    if not self.cached_json_detailed_xmltvChannels_http:
-                        self.log("findZap2itID, no cached_json_detailed_xmltvChannels")
-                        self.cached_json_detailed_xmltvChannels_http = str(xmltv.read_channels(Open_URL(filename)))
-                    json_details = self.cached_json_detailed_xmltvChannels_http
+                    json_details = self.readXMLTV(Open_URL(filename), filename)
                 else:
                     self.log("findZap2itID, filename local = " + filename)
-                    fle = FileAccess.open(filename, "r")
-                    if not self.cached_json_detailed_xmltvChannels_local:
-                        self.log("findZap2itID, no cached_json_detailed_xmltvChannels")
-                        self.cached_json_detailed_xmltvChannels_local = str(xmltv.read_channels(fle))
-                    json_details = self.cached_json_detailed_xmltvChannels_local
-                
-                xbmc.sleep(100)
-                fle.close()
+                    json_details = self.readXMLTV(FileAccess.open(filename, "r"), filename)
                 file_detail = re.compile( "{(.*?)}", re.DOTALL ).findall(json_details)
                 
                 try:
@@ -5437,7 +5458,6 @@ class ChannelList:
                 self.logDebug("findZap2itID, matchLST = " + str(matchLST))
                 
                 for f in (file_detail):
-                    found = False
                     dnameID = []
                     CHid = '0'
                     match = re.search("'display-name' *: *\[(.*?)\]", f)
@@ -5455,27 +5475,27 @@ class ChannelList:
                             
             sorted_XMLTVMatchlst = sorted_nicely(XMLTVMatchlst)
             self.logDebug("findZap2itID, sorted_XMLTVMatchlst = " + str(sorted_XMLTVMatchlst))
-                
+            
             for n in range(len(sorted_XMLTVMatchlst)):
                 CHid = '0'
+                found = False
                 dnameID = sorted_XMLTVMatchlst[n]
                 dname = dnameID.split(' : ')[0]
                 CHid = dnameID.split(' : ')[1]
-
+                
                 if dname.upper() in matchLST: 
                     self.log("findZap2itID, Match Found: " + str(CHname.upper()) +' == '+ str(dname.upper()) + ' ' + str(CHid))  
                     found = True
                     return orgCHname, CHid
                         
-            if not found: 
+            xbmc.executebuiltin( "Dialog.Close(busydialog)" )
+            if not found:
+                self.log("findZap2itID, No Match Found: " + str(CHname.upper()) +' == '+ str(dname.upper()) + ' ' + str(CHid))
                 select = selectDialog(sorted_XMLTVMatchlst, 'Select matching id to [B]%s[/B]' % orgCHname)
                 dnameID = sorted_XMLTVMatchlst[select]
                 CHid = dnameID.split(' : ')[1]
                 return orgCHname, CHid
-            
         except Exception: 
-            buggalo.addExtraData("findZap2itID, CHname = ", CHname)
-            buggalo.addExtraData("findZap2itID, file_detail = ", file_detail)
             buggalo.onExceptionRaised()
             
         
@@ -5927,4 +5947,3 @@ class ChannelList:
             fle.write("%s" % mediapath)
             fle.close()
             return filepath
-         

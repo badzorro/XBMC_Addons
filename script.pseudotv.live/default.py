@@ -82,11 +82,13 @@ if xbmcgui.Window(10000).getProperty("PseudoTVRunning") != "True":
     
     if PTVL_Version != __version__:
         ClearPlaylists()
-        # REAL_SETTINGS.setSetting('ClearCache', 'true')
+        REAL_SETTINGS.setSetting('ClearCache', 'true')
         REAL_SETTINGS.setSetting('ForceChannelReset', 'true')
         REAL_SETTINGS.setSetting("PTVL_Version", __version__)
+        # Donor Download
         xbmc.executebuiltin("RunScript("+__cwd__+"/utilities.py,-DDautopatch)")
-        
+        # Auto VideoWindow Patch.
+        VideoWindow()
         #call showChangeLog like this to workaround bug in openElec, *Thanks spoyser
         xbmc.executebuiltin("RunScript("+__cwd__+"/utilities.py,-showChangelog)")
         
@@ -121,7 +123,6 @@ if xbmcgui.Window(10000).getProperty("PseudoTVRunning") != "True":
             REAL_SETTINGS.setSetting('ClearCache', "false")
             xbmc.executebuiltin("Notification( %s, %s, %d, %s)" % ("PseudoTV Live", "System Cache Cleared", 1000, THUMB) )
        
-           
         # Clear BCT Caches
         if REAL_SETTINGS.getSetting("ClearBCT") == "true":
             log('ClearBCT')  
@@ -145,19 +146,6 @@ if xbmcgui.Window(10000).getProperty("PseudoTVRunning") != "True":
                 pass
             REAL_SETTINGS.setSetting('ClearLiveArt', "false")
             
-        # Clear Artwork Cache
-        if REAL_SETTINGS.getSetting("ClearLiveArtCache") == "true":
-            artwork.delete("%") 
-            artwork1.delete("%")
-            artwork2.delete("%")
-            artwork3.delete("%")
-            artwork4.delete("%")
-            artwork5.delete("%")
-            artwork6.delete("%")
-            log('ArtCache Purged!')
-            REAL_SETTINGS.setSetting('ClearLiveArtCache', "false")
-            xbmc.executebuiltin("Notification( %s, %s, %d, %s)" % ("PseudoTV Live", "Artwork Cache Cleared", 1000, THUMB) )
-
         #Enforce settings
         if LOWPOWER == True:
             #Set Configurations Optimized for LowPower Hardware.
@@ -178,4 +166,4 @@ if xbmcgui.Window(10000).getProperty("PseudoTVRunning") != "True":
         PseudoTV()
 else:
     log('script.pseudotv.live - Already running, exiting', xbmc.LOGERROR)
-    xbmc.executebuiltin("Notification( %s, %s, %d, %s)" % ("PseudoTV Live", "Already running, Try Rebooting?", 1000, THUMB) )
+    xbmc.executebuiltin("Notification( %s, %s, %d, %s)" % ("PseudoTV Live", "Already running, Please Wait...", 1000, THUMB) )

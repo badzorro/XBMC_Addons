@@ -1,3 +1,10 @@
+[*] TV Network Autotuning uses sorts using "Show Ordering".
+[*] Fixed Artwork Download bug, improved sluggish EPG?
+[*] Global Search sidebar option, tweaked "OnDemand" functions.
+[*] Tweaked artwork downloader.
+[*] EPG "Dynamic Artwork" disabled for lowpower hardware.
+[*] Various tweaks & bug corrections
+[*] [COLOR=blue][B]^ v.0.5.9 ^[/B][/COLOR]
 [*] Videowindow patch automatically applied.
 [*] TV Listings from PVR backend; chtype 8, "xmltv name" (ie.setting3) needs to be 'pvr'.
 [*] Concast skin removed, now being maintained by Marshall. Time Whorner Skin dropped. 

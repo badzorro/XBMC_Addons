@@ -206,8 +206,7 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
             ADDON_SETTINGS.setSetting(setting4, self.getControl(273).getLabel())
         elif chantype == 15: #Plugin
             ADDON_SETTINGS.setSetting(setting1, self.getControl(282).getLabel())
-            if len(self.getControl(283).getLabel()) > 1:
-                ADDON_SETTINGS.setSetting(setting2, self.getControl(283).getLabel())
+            ADDON_SETTINGS.setSetting(setting2, self.getControl(283).getLabel())
             ADDON_SETTINGS.setSetting(setting3, self.getControl(284).getLabel())
             ADDON_SETTINGS.setSetting(setting4, self.getControl(285).getLabel())
         elif chantype == 16: #UPNP
@@ -361,16 +360,13 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
             self.getControl(202).setLabel(self.SortOrderList[select]) 
         #LiveTV
         elif controlId == 216:    # LiveTV Channel ID, select
-            chnlst = ChannelList() 
             if self.getControl(212).getLabel() != '':
-                xbmc.executebuiltin( "ActivateWindow(busydialog)" )
                 setting3 = self.getControl(212).getLabel()
                 if setting3.startswith('http') or setting3 == 'pvr':
                     xmlTvFile = setting3
                 else:
                     xmlTvFile = os.path.join(XMLTV_LOC, str(setting3) +'.xml')
                 dnameID, CHid = chnlst.findZap2itID(self.getControl(213).getLabel(), xmlTvFile)
-                xbmc.executebuiltin( "Dialog.Close(busydialog)" )
                 self.getControl(216).setLabel(CHid)
             else:  
                 xbmc.executebuiltin("Notification( %s, %s, %d, %s)" % ("PseudoTV Live", "Enter Channel & XMLTV Name", 4000, THUMB) )
@@ -393,8 +389,9 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
                 title, genre = title.split(' - ')
             except:
                 pass
-        elif controlId == 212:    # LiveTV XMLTV Name, input
+        elif controlId == 212:    # LiveTV XMLTV Name, Select
             xbmc.executebuiltin( "ActivateWindow(busydialog)" )
+            xmltvLst = []
             xmltvcacheLst = [s.replace('.xml','') for s in os.listdir(XMLTV_CACHE_LOC) if s.endswith('.xml')] + ['pvr']
             xmltvLst = sorted_nicely([s.replace('.xml','') for s in os.listdir(XMLTV_LOC) if s.endswith('.xml')] + xmltvcacheLst)
             xbmc.executebuiltin( "Dialog.Close(busydialog)" )
@@ -591,6 +588,9 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
                 self.getControl(285).setLabel(Option4)
                 if len(Option2) > 1:
                     self.getControl(283).setLabel(Option2)
+                else:
+                    self.getControl(283).setLabel(' ')
+                    self.getControl(283).setLabel('')
                 ADDON_SETTINGS.setSetting("Channel_" + str(self.channel) + "_rulecount", "1")
                 ADDON_SETTINGS.setSetting("Channel_" + str(self.channel) + "_rule_1_id", "1")
                 ADDON_SETTINGS.setSetting("Channel_" + str(self.channel) + "_rule_1_opt_1", CHname)
@@ -607,6 +607,9 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
                 self.getControl(285).setLabel(Option4)
                 if len(Option2) > 1:
                     self.getControl(283).setLabel(Option2)
+                else:
+                    self.getControl(283).setLabel(' ')
+                    self.getControl(283).setLabel('')
                 ADDON_SETTINGS.setSetting("Channel_" + str(self.channel) + "_rulecount", "1")
                 ADDON_SETTINGS.setSetting("Channel_" + str(self.channel) + "_rule_1_id", "1")
                 ADDON_SETTINGS.setSetting("Channel_" + str(self.channel) + "_rule_1_opt_1", CHname)
@@ -615,7 +618,7 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
                 self.PluginSourcePath = 'plugin://' + self.PluginSourcePath
                 self.getControl(280).setLabel(self.PluginSourceName)
                 self.clearLabel(281)
-        elif controlId == 281:      # Plugin Path, input
+        elif controlId == 281:      # Plugin browse, input
             xbmc.executebuiltin( "ActivateWindow(busydialog)" )
             if len(self.getControl(281).getLabel()) > 1:
                 PluginDirNameLst, PluginDirPathLst = self.parsePlugin(chnlst.PluginInfo(self.PluginSourcePathDir), 'Dir')
@@ -623,6 +626,7 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
                 PluginDirNameLst, PluginDirPathLst = self.parsePlugin(chnlst.PluginInfo(self.PluginSourcePath), 'Dir')
                 self.DirName = ''
                 self.PluginSourcePathDir = ''
+                
             select = selectDialog(PluginDirNameLst, 'Select [COLOR=red][D][/COLOR]irectory')
             selectItem = PluginDirNameLst[select]
             
@@ -1211,7 +1215,7 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
             self.getControl(id).setLabel('')
         else:
             for i in range(NUMBER_CHANNEL_TYPES):
-                if i >= 8:
+                if i >= 7:
                     base = (120 + ((i + 1) * 10))
                     for n in range(10):
                         try:

@@ -118,7 +118,7 @@ class EPGWindow(xbmcgui.WindowXMLDialog):
         timew = self.getControl(120).getWidth()
         timeh = self.getControl(120).getHeight()
         self.MyOverlayWindow.showingEPG = True
-        
+                
         #Set timebar path, else use alt. path
         self.currentTimeBar = xbmcgui.ControlImage(timex, timey, timew, timeh, MEDIA_LOC + TIME_BAR)  
         self.addControl(self.currentTimeBar)
@@ -342,7 +342,7 @@ class EPGWindow(xbmcgui.WindowXMLDialog):
             Rat = '[' + rating + ']'
         else:
             Rat = ''  
-        
+            
         mylabel = (mylabel + ' ' + New + ' ' + Rat).replace('()','').replace('[]','')
         return mylabel
 
@@ -350,32 +350,31 @@ class EPGWindow(xbmcgui.WindowXMLDialog):
     def GetEPGtype(self, genre):
         #rewrite as option switch, dictionary? faster? todo
         if genre in COLOR_RED_TYPE:
-            EPGTEXTURE = (EPGGENRE_LOC + 'COLOR_RED.png')
+            return (EPGGENRE_LOC + 'COLOR_RED.png')
         elif genre in COLOR_GREEN_TYPE:
-            EPGTEXTURE = (EPGGENRE_LOC + 'COLOR_GREEN.png')
+            return (EPGGENRE_LOC + 'COLOR_GREEN.png')
         elif genre in COLOR_mdGREEN_TYPE:
-            EPGTEXTURE = (EPGGENRE_LOC + 'COLOR_mdGREEN.png')
+            return (EPGGENRE_LOC + 'COLOR_mdGREEN.png')
         elif genre in COLOR_BLUE_TYPE:
-            EPGTEXTURE = (EPGGENRE_LOC + 'COLOR_BLUE.png')
+            return (EPGGENRE_LOC + 'COLOR_BLUE.png')
         elif genre in COLOR_ltBLUE_TYPE:
-            EPGTEXTURE = (EPGGENRE_LOC + 'COLOR_ltBLUE.png')
+            return (EPGGENRE_LOC + 'COLOR_ltBLUE.png')
         elif genre in COLOR_CYAN_TYPE:
-            EPGTEXTURE = (EPGGENRE_LOC + 'COLOR_CYAN.png')
+            return (EPGGENRE_LOC + 'COLOR_CYAN.png')
         elif genre in COLOR_ltCYAN_TYPE:
-            EPGTEXTURE = (EPGGENRE_LOC + 'COLOR_ltCYAN.png')
+            return (EPGGENRE_LOC + 'COLOR_ltCYAN.png')
         elif genre in COLOR_PURPLE_TYPE:
-            EPGTEXTURE = (EPGGENRE_LOC + 'COLOR_PURPLE.png')
+            return (EPGGENRE_LOC + 'COLOR_PURPLE.png')
         elif genre in COLOR_ltPURPLE_TYPE:
-            EPGTEXTURE = (EPGGENRE_LOC + 'COLOR_ltPURPLE.png')
+            return (EPGGENRE_LOC + 'COLOR_ltPURPLE.png')
         elif genre in COLOR_ORANGE_TYPE:
-            EPGTEXTURE = (EPGGENRE_LOC + 'COLOR_ORANGE.png')
+            return (EPGGENRE_LOC + 'COLOR_ORANGE.png')
         elif genre in COLOR_YELLOW_TYPE:
-            EPGTEXTURE = (EPGGENRE_LOC + 'COLOR_YELLOW.png')
+            return (EPGGENRE_LOC + 'COLOR_YELLOW.png')
         elif genre in COLOR_GRAY_TYPE:
-            EPGTEXTURE = (EPGGENRE_LOC + 'COLOR_GRAY.png')
+            return (EPGGENRE_LOC + 'COLOR_GRAY.png')
         else:#Unknown or COLOR_ltGRAY_TYPE
-            EPGTEXTURE = (EPGGENRE_LOC + 'COLOR_ltGRAY.png') 
-        return EPGTEXTURE
+            return (EPGGENRE_LOC + 'COLOR_ltGRAY.png') 
         
 
     # create the buttons for the specified channel in the given row
@@ -932,26 +931,32 @@ class EPGWindow(xbmcgui.WindowXMLDialog):
         chnoffset = self.focusRow - 2
         newchan = self.centerChannel
         
-        while chnoffset != 0:
-            if chnoffset > 0:
-                newchan = self.MyOverlayWindow.fixChannel(newchan + 1, True)
-                chnoffset -= 1
-            else:
-                newchan = self.MyOverlayWindow.fixChannel(newchan - 1, False)
-                chnoffset += 1
+        if self.MyOverlayWindow.OnDemand and chnoffset == 0:
+            print 'setShowInfo, OnDemand'
+            plpos = -999
+            mediapath = xbmc.Player().getPlayingFile()
+        else:
+            while chnoffset != 0:
+                if chnoffset > 0:
+                    newchan = self.MyOverlayWindow.fixChannel(newchan + 1, True)
+                    chnoffset -= 1
+                else:
+                    newchan = self.MyOverlayWindow.fixChannel(newchan - 1, False)
+                    chnoffset += 1
 
-        plpos = self.determinePlaylistPosAtTime(starttime, newchan)
-        
+            plpos = self.determinePlaylistPosAtTime(starttime, newchan)
+            
+            if plpos == -1:
+                self.log('Unable to find the proper playlist to set from EPG')
+                return        
+            mediapath = ascii(self.MyOverlayWindow.channels[newchan - 1].getItemFilename(plpos))
+            
         try:
             chtype = int(ADDON_SETTINGS.getSetting('Channel_' + str(newchan) + '_type'))
         except:
             chtype = int(ADDON_SETTINGS.getSetting('Channel_' + str(newchan) + '_type'))
             pass
-        
-        if plpos == -1:
-            self.log('Unable to find the proper playlist to set from EPG')
-            return
-                     
+            
         #Check if VideoWindow Patch found, Toggle Visible.
         if self.MyOverlayWindow.VideoWindow == True:
             self.log('VideoWindow = True')
@@ -979,7 +984,6 @@ class EPGWindow(xbmcgui.WindowXMLDialog):
         except:
             pass
             
-        mediapath = ascii(self.MyOverlayWindow.channels[newchan - 1].getItemFilename(plpos))
         chname = ascii(self.MyOverlayWindow.channels[newchan - 1].name)
         self.SetMediaInfo(chtype, chname, mediapath, newchan, plpos)
         
@@ -987,12 +991,23 @@ class EPGWindow(xbmcgui.WindowXMLDialog):
     def SetMediaInfo(self, chtype, chname, mediapath, newchan, plpos):
         self.log('SetMediaInfo') 
         chanlist = ChannelList()
-        title = (self.MyOverlayWindow.channels[newchan - 1].getItemTitle(plpos))   
-        SEtitle = self.MyOverlayWindow.channels[newchan - 1].getItemEpisodeTitle(plpos) 
-        timestamp = (self.MyOverlayWindow.channels[newchan - 1].getItemtimestamp(plpos))
-        LiveID = (self.MyOverlayWindow.channels[newchan - 1].getItemLiveID(plpos))      
-        LiveID = chanlist.unpackLiveID(LiveID)
         
+        if plpos == -999:
+            tmpstr = (self.MyOverlayWindow.GetPlayingItem()).split('//')
+            title = tmpstr[0]
+            SEtitle = (tmpstr[1] + ' [COLOR=%s][B]OnDemand[/B][/COLOR]' % ((CHANBUG_COLOR).replace('0x','')))
+            Description = tmpstr[2]
+            timestamp = tmpstr[4]
+            LiveID = chanlist.unpackLiveID(tmpstr[5])
+            self.getControl(503).setImage(IMAGES_LOC + 'label_ondemand.png')
+        else:
+            title = (self.MyOverlayWindow.channels[newchan - 1].getItemTitle(plpos))   
+            SEtitle = self.MyOverlayWindow.channels[newchan - 1].getItemEpisodeTitle(plpos) 
+            Description = self.MyOverlayWindow.channels[newchan - 1].getItemDescription(plpos)
+            timestamp = (self.MyOverlayWindow.channels[newchan - 1].getItemtimestamp(plpos))
+            LiveID = (self.MyOverlayWindow.channels[newchan - 1].getItemLiveID(plpos))      
+            LiveID = chanlist.unpackLiveID(LiveID)
+            self.getControl(503).setImage(self.channelLogos + ascii(self.MyOverlayWindow.channels[newchan - 1].name) + '.png')
         try:
             if self.showSeasonEpisode:
                 SEinfo = SEtitle.split(' -')[0]
@@ -1006,11 +1021,10 @@ class EPGWindow(xbmcgui.WindowXMLDialog):
         except:
             swtitle = SEtitle
             pass
-            
-        self.getControl(500).setLabel((self.MyOverlayWindow.channels[newchan - 1].getItemTitle(plpos)).replace("*NEW*", ""))
+
+        self.getControl(500).setLabel((title).replace("*NEW*",""))
         self.getControl(501).setLabel(swtitle)
-        self.getControl(502).setLabel(self.MyOverlayWindow.channels[newchan - 1].getItemDescription(plpos))
-        self.getControl(503).setImage(self.channelLogos + ascii(self.MyOverlayWindow.channels[newchan - 1].name) + '.png')
+        self.getControl(502).setLabel(Description)
 
         ##LIVEID##
         type = LiveID[0]
@@ -1091,10 +1105,13 @@ class EPGWindow(xbmcgui.WindowXMLDialog):
         self.log('setArtwork1')
         print type, chtype, chname, id, dbid, mpath, type1EXT
         try:
-            if REAL_SETTINGS.getSetting("ArtService_Running") == "false":
-                setImage1 = self.Artdownloader.FindArtwork(type, chtype, chname, id, dbid, mpath, type1EXT)
+            if LOWPOWER == True:
+                setImage1 = self.Artdownloader.SetDefaultArt(chname, mpath, type1EXT)
             else:
-                setImage1 = self.Artdownloader.FindArtwork_NEW(type, chtype, chname, id, dbid, mpath, type1EXT)
+                if REAL_SETTINGS.getSetting("ArtService_Running") == "false":
+                    setImage1 = self.Artdownloader.FindArtwork(type, chtype, chname, id, dbid, mpath, type1EXT)
+                else:
+                    setImage1 = self.Artdownloader.FindArtwork_NEW(type, chtype, chname, id, dbid, mpath, type1EXT)
             self.getControl(508).setImage(setImage1)
             self.getControl(508).setVisible(True)
         except Exception,e:
@@ -1106,10 +1123,13 @@ class EPGWindow(xbmcgui.WindowXMLDialog):
     def setArtwork2(self, type, chtype, chname, id, dbid, mpath, type2EXT):
         self.log('setArtwork2')
         try: 
-            if REAL_SETTINGS.getSetting("ArtService_Running") == "false":
-                setImage2 = self.Artdownloader.FindArtwork(type, chtype, chname, id, dbid, mpath, type2EXT)
+            if LOWPOWER == True:
+                setImage2 = self.Artdownloader.SetDefaultArt(chname, mpath, type2EXT)
             else:
-                setImage2 = self.Artdownloader.FindArtwork_NEW(type, chtype, chname, id, dbid, mpath, type2EXT)
+                if REAL_SETTINGS.getSetting("ArtService_Running") == "false":
+                    setImage2 = self.Artdownloader.FindArtwork(type, chtype, chname, id, dbid, mpath, type2EXT)
+                else:
+                    setImage2 = self.Artdownloader.FindArtwork_NEW(type, chtype, chname, id, dbid, mpath, type2EXT)
             self.getControl(510).setImage(setImage2)
             self.getControl(510).setVisible(True)
         except Exception,e:

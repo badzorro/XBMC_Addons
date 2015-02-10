@@ -61,7 +61,7 @@
 <!--PVR-->
    <category label="30400">
         <setting id="SyncXMLTV_Enabled" label="30397" type="bool" default="true"/>
-        <setting id="xmltvLOC" type="folder" source="auto" label="30404" default="" />
+        <setting id="xmltvLOC" type="folder" source="auto" label="30404" default="special://userdata/script.pseudotv.live/cache/xmltv" />
         <setting id="DVR_Enabled" label="30801" type="bool" default="false"/>
         <setting id="DVR_Folder" subsetting="true" label="30802" visible="eq(-1,true)" type="folder" source="auto" default="" />        
         <setting id="sickbeard.enabled" label="30708" type="bool" default="false" />
