@@ -91,7 +91,6 @@ def DDautopatch():
             REAL_SETTINGS.setSetting("COM_Donor", "true")
             REAL_SETTINGS.setSetting("TRL_Donor", "true")
             REAL_SETTINGS.setSetting("CAT_Donor", "true")
-            xbmc.executebuiltin("UpdateLocalAddons")
             xbmc.executebuiltin("Notification( %s, %s, %d, %s)" % ("PseudoTV Live", "Donor Autoupdate Complete", 4000, THUMB) ) 
     except Exception:
         pass

@@ -216,7 +216,7 @@
         <setting label="30990" type="lsep"/>
         <setting id="ActionTimeInt" type="slider" label="30309" default="20" range="10,1,30" option="int" />
         <setting id="enable_Debug" type="bool" label="30993" default="false"/>
-        <setting id="Override_ok" type="bool" label="30991" default="false"/>
+        <setting id="Override_ok" type="bool" label="30991" default="true"/>
         <setting id="OS_SET_OVERRIDE" type="bool" label="30981" default="false"/>
         <setting id="ClearBCT" type="bool" label="30995" default="false"/>
         <setting id="ClearLiveArt" type="bool" label="30996" default="false"/>

@@ -51,19 +51,15 @@ def PseudoTV():
     import resources.lib.Overlay as Overlay
     
     MyOverlayWindow = Overlay.TVOverlay("script.pseudotv.live.TVOverlay.xml", __cwd__, Skin_Select)
-
     for curthread in threading.enumerate():
         try:
             log("Active Thread: " + str(curthread.name), xbmc.LOGERROR)
-
             if curthread.name != "MainThread":
                 try:
                     curthread.join()      
                 except: 
                     pass
-
-                log("Joined " + curthread.name)
-                
+                log("Joined " + curthread.name)               
         except: 
             pass
             
@@ -85,6 +81,7 @@ if xbmcgui.Window(10000).getProperty("PseudoTVRunning") != "True":
         REAL_SETTINGS.setSetting('ClearCache', 'true')
         REAL_SETTINGS.setSetting('ForceChannelReset', 'true')
         REAL_SETTINGS.setSetting("PTVL_Version", __version__)
+        
         # Donor Download
         xbmc.executebuiltin("RunScript("+__cwd__+"/utilities.py,-DDautopatch)")
         # Auto VideoWindow Patch.

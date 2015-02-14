@@ -291,6 +291,24 @@
                 <focusedcolor>white</focusedcolor>
                 <onup>114</onup>
                 <onleft>112</onleft>
+                <onright>555</onright>
+                <align>center</align>
+                <colordiffuse></colordiffuse>
+            </control>
+            
+            <!-- HELP -->
+            <control type="button" id="555">
+                <left>615</left>
+                <top>485</top>
+                <width>40</width>
+				<height>40</height>
+                <label>?</label>
+                <texturefocus border="5">ptv_button-focus.png</texturefocus>
+                <texturenofocus border="5">ptv_button-nofocus.png</texturenofocus>
+                <textcolor>gray</textcolor>
+                <focusedcolor>white</focusedcolor>
+                <onup>114</onup>
+                <onleft>113</onleft>
                 <onright>112</onright>
                 <align>center</align>
                 <colordiffuse></colordiffuse>
@@ -1918,7 +1936,7 @@
                 <top>110</top>
                 <width>720</width>
                 <height>455</height>
-                <!-- Plugin Name -->
+                <!-- UPNP Name -->
                 <control type="button" id="290">
                     <left>40</left>
                     <top>105</top>
@@ -1942,7 +1960,7 @@
                     <label>Plugin:</label>
                     <aligny>center</aligny>                   
                 </control>
-                <!-- Plugin Split Directory -->
+                <!-- UPNP Split Directory -->
                 <control type="button" id="291">
                     <left>40</left>
                     <top>145</top>
@@ -1966,7 +1984,7 @@
                     <label>Click to Browse:</label>
                     <aligny>center</aligny>                   
                 </control>
-                <!-- Hidden: Plugin Setting1 -->
+                <!-- Hidden: UPNP Setting1 -->
                 <control type="button" id="292">
                     <left>40</left>
                     <top>145</top>

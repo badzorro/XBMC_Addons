@@ -106,8 +106,26 @@ def splitall(path):
             path = parts[0]
             allparts.insert(0, parts[1])
     return allparts
-        
-        
+     
+
+def showText(heading, text):
+    log("showText")
+    id = 10147
+    xbmc.executebuiltin('ActivateWindow(%d)' % id)
+    xbmc.sleep(100)
+    win = xbmcgui.Window(id)
+    retry = 50
+    while (retry > 0):
+        try:
+            xbmc.sleep(10)
+            retry -= 1
+            win.getControl(1).setLabel(heading)
+            win.getControl(5).setText(text)
+            return
+        except:
+            pass
+
+            
 def infoDialog(str, header=ADDON_NAME):
     try: xbmcgui.Dialog().notification(header, str, THUMB, 3000, sound=False)
     except: xbmc.executebuiltin("Notification(%s,%s, 3000, %s)" % (header, str, THUMB))
@@ -119,8 +137,9 @@ def okDialog(str1, str2, header=ADDON_NAME):
     
 def selectDialog(list, header=ADDON_NAME):
     log('selectDialog')
-    select = xbmcgui.Dialog().select(header, list)
-    return select
+    if len(list) > 0:
+        select = xbmcgui.Dialog().select(header, list)
+        return select
 
     
 def yesnoDialog(str1, str2, header=ADDON_NAME, str3='', str4=''):

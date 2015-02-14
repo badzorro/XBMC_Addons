@@ -995,7 +995,7 @@ class EPGWindow(xbmcgui.WindowXMLDialog):
         if plpos == -999:
             tmpstr = (self.MyOverlayWindow.GetPlayingItem()).split('//')
             title = tmpstr[0]
-            SEtitle = (tmpstr[1] + ' [COLOR=%s][B]OnDemand[/B][/COLOR]' % ((CHANBUG_COLOR).replace('0x','')))
+            SEtitle = ('[COLOR=%s][B]OnDemand[/B][/COLOR]' % ((CHANBUG_COLOR).replace('0x','')))
             Description = tmpstr[2]
             timestamp = tmpstr[4]
             LiveID = chanlist.unpackLiveID(tmpstr[5])

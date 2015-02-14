@@ -973,7 +973,7 @@ class Migrate:
 
                     Globals.ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_type", "16")
                     Globals.ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_time", "0")
-                    Globals.ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_1", PlayonPath + 'Amazon Instant Video/Prime Watchlist/TV Shows')
+                    Globals.ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_1", 'Amazon Instant Video/Prime Watchlist/TV Shows')
                     Globals.ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_2", "")
                     Globals.ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_3", "25")
                     Globals.ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_4", "0")
@@ -986,7 +986,7 @@ class Migrate:
                     channelNum += 1
                     Globals.ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_type", "16")
                     Globals.ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_time", "0")
-                    Globals.ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_1", PlayonPath + 'Amazon Instant Video/Prime Watchlist/Movies')
+                    Globals.ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_1", 'Amazon Instant Video/Prime Watchlist/Movies')
                     Globals.ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_2", "")
                     Globals.ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_3", "25")
                     Globals.ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_4", "0")
@@ -1004,7 +1004,7 @@ class Migrate:
                     
                     Globals.ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_type", "16")
                     Globals.ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_time", "0")
-                    Globals.ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_1", PlayonPath + 'Hulu/Your Subscriptions')
+                    Globals.ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_1", 'Hulu/Your Subscriptions')
                     Globals.ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_2", "")
                     Globals.ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_3", "25")
                     Globals.ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_4", "0")
@@ -1017,7 +1017,7 @@ class Migrate:
                     channelNum += 1
                     Globals.ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_type", "16")
                     Globals.ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_time", "0")
-                    Globals.ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_1", PlayonPath + 'Hulu/Popular/Popular Feature Films')
+                    Globals.ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_1", 'Hulu/Popular/Popular Feature Films')
                     Globals.ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_2", "")
                     Globals.ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_3", "25")
                     Globals.ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_4", "0")
@@ -1030,7 +1030,7 @@ class Migrate:
                     channelNum += 1
                     Globals.ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_type", "16")
                     Globals.ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_time", "0")
-                    Globals.ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_1", PlayonPath + 'Hulu/Recently Added/Recently Added Feature Films')
+                    Globals.ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_1", 'Hulu/Recently Added/Recently Added Feature Films')
                     Globals.ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_2", "")
                     Globals.ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_3", "25")
                     Globals.ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_4", "0")
@@ -1048,7 +1048,7 @@ class Migrate:
                     
                     Globals.ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_type", "16")
                     Globals.ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_time", "0")
-                    Globals.ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_1", PlayonPath + 'Netflix/My List')
+                    Globals.ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_1", 'Netflix/My List')
                     Globals.ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_2", "")
                     Globals.ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_3", "25")
                     Globals.ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_4", "0")
@@ -1061,7 +1061,7 @@ class Migrate:
                     channelNum += 1       
                     Globals.ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_type", "16")
                     Globals.ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_time", "0")
-                    Globals.ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_1", PlayonPath + 'Netflix/Recently Added')
+                    Globals.ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_1", 'Netflix/Recently Added')
                     Globals.ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_2", "")
                     Globals.ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_3", "25")
                     Globals.ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_4", "0")
@@ -1265,7 +1265,9 @@ class Migrate:
             try:
                 title = chanlist.CleanLabels(NameLst[i])
                 try:
-                    title, genre = title.split(' - ')
+                    title = title.split(' - ')[0]
+                    title = title.split(': ')[0]
+                    genre = title.split(': ')[1]
                     print title, genre
                     if genre.lower() not in self.genre_filter:
                         found = False
@@ -1278,7 +1280,7 @@ class Migrate:
                 self.updateDialog.update(self.updateDialogProgress,"AutoTuning","",NameLst[i])
                 Globals.ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_type", str(chtype))
                 Globals.ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_time", "0")
-                Globals.ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_1", str(Option1LST[i]))
+                Globals.ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_1", str(Option1LST[i]).replace(',','|'))
                 Globals.ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_2", str(Option2LST[i]))
                 Globals.ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_3", str(Option3LST[i]))
                 Globals.ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_4", str(Option4LST[i]))

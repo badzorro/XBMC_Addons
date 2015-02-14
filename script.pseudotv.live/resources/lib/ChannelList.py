@@ -139,8 +139,8 @@ class ChannelList:
         self.log("IncludeBCTs is " + str(self.incBCTs))
         self.youtube_ok = self.youtube_player()
         self.log('Youtube Player is ' + str(self.youtube_ok))
-        self.playon_ok = self.playon_player()
-        self.log('Playon Player is ' + str(self.playon_ok))
+        self.Override_ok = REAL_SETTINGS.getSetting('Override_ok') == "true"
+        self.log('Override Stream Validation is ' + str(self.Override_ok))
         self.t = tvdb_api.Tvdb()
         self.tvdbAPI = TVDB(TVDB_API_KEY)
         self.tmdbAPI = TMDB(TMDB_API_KEY)  
@@ -614,7 +614,7 @@ class ChannelList:
         try:
             xml = FileAccess.open(fle, "r")
         except Exception,e:
-            self.log("getSmartPlaylisyName Unable to open the smart playlist " + fle, xbmc.LOGERROR)
+            self.log("getSmartPlaylistName Unable to open the smart playlist " + fle, xbmc.LOGERROR)
             return ''
 
         try:
@@ -642,7 +642,6 @@ class ChannelList:
         israndom = False  
         reverseOrder = False
         fileList = []
-        limit = self.limit
         setting4 = setting4.replace('Default','0').replace('Random','1').replace('Reverse','2') 
         
         if setting4 == '0':
@@ -658,10 +657,26 @@ class ChannelList:
             israndom = False
             reverseOrder = True
         
+        try:
+            if chtype > 9 and len(setting3) > 0:
+                limit = int(setting3)
+                self.log("makeChannelList, Overriding Global Parse-limit to " + str(limit))
+            else:
+                raise
+        except:
+            if chtype == 8:
+                limit = 48
+            elif chtype >= 10:
+                if self.limit == 0 or self.limit >= 200:
+                    limit = 200
+                elif limit < 25:
+                    limit = 25
+            else:
+                limit = self.limit
+            self.log("makeChannelList, Using Global Parse-limit " + str(limit))
         # Directory
         if chtype == 7:
-            fileList = self.createDirectoryPlaylist(setting1, setting3, setting4, limit)
-              
+            fileList = self.createDirectoryPlaylist(setting1, setting3, setting4, limit)     
         # LiveTV
         elif chtype == 8:
             self.log("Building LiveTV Channel, " + setting1 + " , " + setting2 + " , " + setting3)
@@ -673,8 +688,7 @@ class ChannelList:
                 setting2 = re.sub(r'\d/tuner\d',"0/tuner0",setting2)
             elif setting2[0:9] == 'hdhomerun' and REAL_SETTINGS.getSetting('HdhomerunMaster') == "false":
                 self.log("Building LiveTV using tuner1")
-                setting2 = re.sub(r'\d/tuner\d',"1/tuner1",setting2)
-            
+                setting2 = re.sub(r'\d/tuner\d',"1/tuner1",setting2) 
             # Validate Feed #
             fileListCHK = self.Valid_ok(setting2)
             if fileListCHK == True:
@@ -682,11 +696,10 @@ class ChannelList:
                 xmltvValid = self.xmltv_ok(setting3)
                 
                 if xmltvValid == True:
-                    fileList = self.buildLiveTVFileList(setting1, setting2, setting3, setting4) 
+                    fileList = self.buildLiveTVFileList(setting1, setting2, setting3, setting4, limit) 
             else:
                 self.log('makeChannelList, CHANNEL: ' + str(channel) + ', CHTYPE: ' + str(chtype), 'fileListCHK invalid: ' + str(setting2))
                 return
-        
         # InternetTV  
         elif chtype == 9:
             self.log("Building InternetTV Channel, " + setting1 + " , " + setting2 + " , " + setting3)
@@ -696,8 +709,7 @@ class ChannelList:
                 fileList = self.buildInternetTVFileList(setting1, setting2, setting3, setting4)
             else:
                 self.log('makeChannelList, CHANNEL: ' + str(channel) + ', CHTYPE: ' + str(chtype), 'fileListCHK invalid: ' + str(setting2))
-                return 
-                
+                return   
         # Youtube                          
         elif chtype == 10:
             if self.youtube_ok != False:
@@ -722,7 +734,6 @@ class ChannelList:
             else:
                 self.log('makeChannelList, CHANNEL: ' + str(channel) + ', CHTYPE: ' + str(chtype), 'self.youtube_ok invalid: ' + str(setting2))
                 return                 
-
         # RSS/iTunes/feedburner/Podcast   
         elif chtype == 11:# Validate Feed #
             fileListCHK = self.Valid_ok(setting1)
@@ -731,18 +742,15 @@ class ChannelList:
                 fileList = self.createRSSFileList(setting1, setting2, setting3, setting4, limit)      
             else:
                 self.log('makeChannelList, CHANNEL: ' + str(channel) + ', CHTYPE: ' + str(chtype), 'fileListCHK invalid: ' + str(setting2))
-                return                    
-                
+                return                            
         # MusicVideos
         elif chtype == 13:
             self.log("Building Music Videos")
-            fileList = self.MusicVideos(setting1, setting2, setting3, setting4, limit)
-                     
+            fileList = self.MusicVideos(setting1, setting2, setting3, setting4, limit)             
         # Extras
         elif chtype == 14 and Donor_Downloaded == True:
             self.log("Extras, " + setting1 + "...")
-            fileList = self.extras(setting1, setting2, setting3, setting4, channel)
-            
+            fileList = self.extras(setting1, setting2, setting3, setting4, channel)     
         # Direct Plugin
         elif chtype == 15:
             # Validate Feed #
@@ -753,13 +761,12 @@ class ChannelList:
             else:
                 self.log('makeChannelList, CHANNEL: ' + str(channel) + ', CHTYPE: ' + str(chtype), 'fileListCHK invalid: ' + str(setting2))
                 return 
-        
         # Direct UPNP
         elif chtype == 16:
-            if self.playon_ok != False:
+            fileListCHK = self.playon_player()
+            if fileListCHK != False:
                 self.log("Building UPNP Channel, " + setting1 + "...")
-                fileList = self.BuildUPNPFileList(setting1, setting2, setting3, setting4, channel)
-    
+                fileList = self.BuildUPNPFileList(setting1, setting2, setting3, setting4, limit)   
         else:
             if chtype == 0:
                 if FileAccess.copy(setting1, MADE_CHAN_LOC + os.path.split(setting1)[1]) == False:
@@ -1160,7 +1167,7 @@ class ChannelList:
         filecount = 0 
         LiveID = 'other|0|0|False|1|NR|'
         LocalLST = self.walk(setting1)
-        
+
         if self.background == False:
             self.updateDialog.update(self.updateDialogProgress, "Updating channel " + str(self.settingChannel), "adding Videos", "getting file list")
         
@@ -1193,17 +1200,10 @@ class ChannelList:
                 tmpstr = str(duration) + ',' + title + "//" + 'Directory Video' + "//" + description + "//" + 'Unknown' + "////" + LiveID + '\n' + (LocalFLE)
                 tmpstr = tmpstr[:2036]
                 fileList.append(tmpstr)
-                
-                if setting3 != '':
-                    if filecount >= int(setting3):
-                        print 'createDirectoryPlaylist, filecount override break'
-                        break
-                else:
-                    #zero limit equals unlimited.
-                    if limit != 0:
-                        if filecount >= limit:
-                            print 'createDirectoryPlaylist, filecount break'
-                            break
+                    
+                if filecount >= limit:
+                    break
+                    
         if filecount == 0:
             self.log('Unable to access Videos files in ' + setting1)
         return fileList
@@ -1959,25 +1959,24 @@ class ChannelList:
             return None
             
             
-    def buildLiveTVFileList(self, setting1, setting2, setting3, setting4):
+    def buildLiveTVFileList(self, setting1, setting2, setting3, setting4, limit):
         xbmc.log("buildLiveTVFileList Cache")
         if Cache_Enabled == True and REAL_SETTINGS.getSetting('EnhancedGuideData') == 'true':  
             try:
-                result = liveTV.cacheFunction(self.buildLiveTVFileList_NEW, setting1, setting2, setting3, setting4)
+                result = liveTV.cacheFunction(self.buildLiveTVFileList_NEW, setting1, setting2, setting3, setting4, limit)
             except:
-                result = self.buildLiveTVFileList_NEW(setting1, setting2, setting3, setting4)
+                result = self.buildLiveTVFileList_NEW(setting1, setting2, setting3, setting4, limit)
                 pass
         else:
-            result = self.buildLiveTVFileList_NEW(setting1, setting2, setting3, setting4)
+            result = self.buildLiveTVFileList_NEW(setting1, setting2, setting3, setting4, limit)
         if not result:
             result = []
         return result  
         
     
-    def buildLiveTVFileList_NEW(self, setting1, setting2, setting3, setting4):
+    def buildLiveTVFileList_NEW(self, setting1, setting2, setting3, setting4, limit):
         self.log("buildLiveTVFileList_NEW")
         showList = []
-        limit = 48
         chname = (self.getChannelName(8, self.settingChannel))
         
         try:
@@ -2315,7 +2314,9 @@ class ChannelList:
                             if self.background == False:
                                 self.updateDialog.update(self.updateDialogProgress, "Updating channel " + str(self.settingChannel), "adding LiveTV, parsing " + chname, "added " + str(showcount) + " entries")
                 root.clear()                  
-            f.close() 
+            f.close()                   
+            if showcount == 0:
+                self.log('Unable to find xmltv data for ' + setting1)
         except Exception: 
             pass
         return showList
@@ -2531,6 +2532,9 @@ class ChannelList:
 
                     if self.background == False:
                         self.updateDialog.update(self.updateDialogProgress, "Updating channel " + str(self.settingChannel), "adding LiveTV, parsing " + chname, "added " + str(showcount))
+        
+            if showcount == 0:
+                self.log('Unable to find pvr guidedata for ' + setting1)
         except Exception: 
             pass
         return showList
@@ -2591,16 +2595,6 @@ class ChannelList:
         YTMSG = setting1
         if self.youtube_ok != False:
         
-            if setting3 == '':
-                if limit == 0 or limit > 200:
-                    limit = 200
-                elif limit < 25:
-                    limit = 25
-                self.log("createYoutubeFilelist, Using Global Parse-limit " + str(limit))
-            else:
-                limit = int(setting3)
-                self.log("createYoutubeFilelist, Overriding Parse-limit = " + str(limit))
-                
             if setting2 == '1' or setting2 == '3' or setting2 == '4':
                 stop = (limit / 25)
                 YTMSG = 'Channel ' + setting1
@@ -2869,22 +2863,11 @@ class ChannelList:
         stop = 0 
         runtime = 0
         genre = 'Unknown'
-        
-        if setting3 == '':
-            if limit == 0 or limit > 200:
-                limit = 200
-            elif limit < 25:
-                limit = 25
-            self.log("createRSSFileList, Using Global Parse-limit " + str(limit))
-        else:
-            limit = int(setting3)
-            self.log("createRSSFileList, Overiding Global Parse-limit to " + str(limit))    
-            
+
         if setting2 == '1':
             stop = 1
         else:
             stop = (limit / 25)
-               
             
         if self.background == False:
             self.updateDialog.update(self.updateDialogProgress, "Updating channel " + str(self.settingChannel), "adding RSS", "")
@@ -3101,16 +3084,6 @@ class ChannelList:
         epdesc = ''
         showcount = 0
         
-        if setting3 == '':
-            if limit == 0 or limit > 200:
-                limit = 200
-            elif limit < 25:
-                limit = 25
-            self.log("LastFM, Using Global Parse-limit " + str(limit))
-        else:
-            limit = int(setting3)
-            self.log("LastFM, Overriding Global Parse-limit to " + str(limit))
-        
         if self.background == False:
             self.updateDialog.update(self.updateDialogProgress, "Updating channel " + str(self.settingChannel), "adding Last.FM", "User " + setting2)
 
@@ -3182,16 +3155,6 @@ class ChannelList:
         MyMusicLST = []
         type = 'musicvideo'
         
-        if setting3 == '':
-            if limit == 0 or limit > 200:
-                limit = 200
-            elif limit < 25:
-                limit = 25
-            self.log("myMusicTV, Using Global Parse-limit " + str(limit))
-        else:
-            limit = int(setting3)
-            self.log("myMusicTV, Overriding Parse-limit = " + str(limit))
-            
         try:
             if FileAccess.exists(fle):
                 f = FileAccess.open(fle, "r")
@@ -4684,8 +4647,10 @@ class ChannelList:
     #recursively walk through plugin directories, return tmpstr of all files found.
     def PluginWalk(self, path, excludeLST, limit, xType, FleType='video'):
         self.log("PluginWalk")
+        self.log("PluginWalk, limit = " + str(limit))
+        print self.filecount
         file_detail_CHK = []
-        dirlimit = int(limit * 2)
+        dirlimit = limit * 4
         tmpstr = ''
         LiveID = 'tvshow|0|0|False|1|NR|'
         fileList = []
@@ -4737,7 +4702,7 @@ class ChannelList:
                     label = self.CleanLabels(label)
                     
                     for i in range(len(excludeLST)):
-                        if excludeLST[i] in label.lower():   
+                        if excludeLST[i] == label.lower():   
                             self.log('PluginWalk, ' + label.lower() + ' in excludeLST')
                             excludeMatch = True
                             break
@@ -5044,6 +5009,8 @@ class ChannelList:
                                                     if rating == 'NR':
                                                         rating = (self.getRating(type, showtitle, year, imdbnumber))
                                                         rating = self.cleanRating(rating)
+                                            # else:
+                                                # Parse fanart and thumb from json, store as dbid
 
                                             GenreLiveID = [genre, type, imdbnumber, dbid, Managed, 1, rating]
                                             genre, LiveID = self.packGenreLiveID(GenreLiveID)
@@ -5093,7 +5060,8 @@ class ChannelList:
                 else:
                     #recursively scan all subfolders
                     fileList += self.PluginWalk(item, excludeLST, limit, xType, FleType)
-        except:
+        except Exception,e:
+            print e
             pass
 
         if self.channels[channel - 1].mode & MODE_ORDERAIRDATE > 0:
@@ -5159,16 +5127,6 @@ class ChannelList:
         
         if self.background == False:
             self.updateDialog.update(self.updateDialogProgress, "Updating channel " + str(self.settingChannel), "Building PluginTV", 'parsing ' + (PluginName))
-            
-        if setting3 == '':
-            if limit == 0 or limit > 200:
-                limit = 200
-            elif limit < 25:
-                limit = 25
-            self.log("BuildPluginFileList_NEW, Using Global Parse-limit " + str(limit))
-        else:
-            limit = int(setting3)
-            self.log("BuildPluginFileList_NEW, Overriding Global Parse-limit to " + str(limit))
 
         Match = True
         while Match:
@@ -5216,16 +5174,16 @@ class ChannelList:
         return showList    
            
     
-    def BuildUPNPFileList(self, setting1, setting2, setting3, setting4, channel):
+    def BuildUPNPFileList(self, setting1, setting2, setting3, setting4, limit):
         xbmc.log("BuildUPNPFileList Cache")
         if Cache_Enabled == True:
             try:
-                result = upnpTV.cacheFunction(self.BuildUPNPFileList_NEW, setting1, setting2, setting3, setting4, channel)
+                result = upnpTV.cacheFunction(self.BuildUPNPFileList_NEW, setting1, setting2, setting3, setting4, limit)
             except:
-                result = self.BuildUPNPFleList_NEW(setting1, setting2, setting3, setting4, channel)
+                result = self.BuildUPNPFileList_NEW(setting1, setting2, setting3, setting4, limit)
                 pass
         else:
-            result = self.BuildUPNPFileList_NEW(setting1, setting2, setting3, setting4, channel)
+            result = self.BuildUPNPFileList_NEW(setting1, setting2, setting3, setting4, limit)
         if not result:
             result = []
         return result  
@@ -5238,84 +5196,83 @@ class ChannelList:
         DetailLST_CHK = []
         self.dircount = 0
         self.filecount = 0
-        upnpID = self.playon_ok
+        
         channel = self.settingChannel
+                        
+        try:
+            excludeLST = setting2.split(',')
+            excludeLST = ([x.lower() for x in excludeLST if x != '']) # remove empty elements
+        except:
+            excludeLST = []
+            pass
+            
+        #filter out unwanted folders
+        excludeLST += ['<<','back','previous','home','create new super folder','explore favourites','explore  favourites','explore xbmc favourites','explore kodi favourites','isearch','search','clips','seasons','trailers']               
+        self.log('BuildUPNPFileList_NEW, excludeLST = ' + str(excludeLST))
         
-        if upnpID != False:
-            try:
-                Directs = (setting1.split('/')) # split folders
-                Directs = ([x.replace('%2F','/') for x in Directs if x != '']) # remove empty elements
-                PluginName = Directs[0]
-            except:
-                Directs = []
-                PluginName = setting1
-                pass
-            self.log('BuildUPNPFileList_NEW, Directs = ' + str(Directs))
-            
-            try:
-                excludeLST = setting2.split(',')
-                excludeLST = ([x.lower() for x in excludeLST if x != '']) # remove empty elements
-            except:
-                excludeLST = []
-                pass
-                
-            #filter out unwanted folders
-            excludeLST += ['<<','back','previous','home','create new super folder','explore favourites','explore  favourites','explore xbmc favourites','explore kodi favourites','isearch','search','clips','seasons','trailers']               
-            self.log('BuildUPNPFileList_NEW, excludeLST = ' + str(excludeLST))
-            
-            if self.background == False:
-                self.updateDialog.update(self.updateDialogProgress, "Updating channel " + str(self.settingChannel), "Building UPNP", 'parsing ' + str(PluginName))
-                
-            if setting3 == '':
-                if limit == 0 or limit > 200:
-                    limit = 200
-                elif limit < 25:
-                    limit = 25
-                self.log("BuildUPNPFileList_NEW, Using Global Parse-limit " + str(limit))
-            else:
-                limit = int(setting3)
-                self.log("BuildUPNPFileList_NEW, Overriding Global Parse-limit to " + str(limit))
-
-            Match = True
-            while Match:
-
-                DetailLST = self.PluginInfo(upnpID)
-
-                #Plugin listitems return parent list during error, catch repeat list and end loops.
-                if DetailLST_CHK == DetailLST:
-                    break
-                else:
-                    DetailLST_CHK = DetailLST
-
-                #end while when no more directories to walk
-                if len(Directs) <= 1:
-                    Match = False
-                
+        if setting1.startswith('upnp://'):
+            #Misc UPNP Source or Direct link
+            Directs = ''
+            upnpID = setting1
+        else:
+            #Playon Only (All Com/Donor lists are playon)
+            upnpID = self.playon_player()
+            setting1 = upnpID + '/' + setting1
+            if upnpID != False:
                 try:
-                    for i in range(len(DetailLST)):
-                        Detail = (DetailLST[i]).split(',')
-                        filetype = Detail[0]
-                        title = Detail[1]
-                        genre = Detail[2]
-                        dur = Detail[3]
-                        description = Detail[4]
-                        file = Detail[5]
-                                     
-                        if filetype == 'directory':
-                            if Directs[0].lower() == title.lower():
-                                self.log('BuildUPNPFileList_NEW, Directory Match: ' + Directs[0].lower() + ' = ' + title.lower())
-                                Directs.pop(0) #remove old directory, search next element
-                                upnpID = file
-                                break
-                except Exception,e:
-                    pass    
+                    Directs = (setting1.split('/')) # split folders
+                    Directs = ([x.replace('%2F','/') for x in Directs if x != '']) # remove empty elements
+                    PluginName = Directs[0]
+                    Directs = Directs[2:]
+                except:
+                    Directs = []
+                    PluginName = setting1
+                    pass
+                self.log('BuildUPNPFileList_NEW, Directs = ' + str(Directs))
+
+                if self.background == False:
+                    self.updateDialog.update(self.updateDialogProgress, "Updating channel " + str(self.settingChannel), "Building Playon", 'parsing ' + str(PluginName))
+
+                Match = True
+                while Match:
+
+                    DetailLST = self.PluginInfo(upnpID)
+
+                    #Plugin listitems return parent list during error, catch repeat list and end loops.
+                    if DetailLST_CHK == DetailLST:
+                        break
+                    else:
+                        DetailLST_CHK = DetailLST
+
+                    #end while when no more directories to walk
+                    if len(Directs) <= 1:
+                        Match = False
                     
-            #all directories found, walk final folder
-            if len(Directs) == 0:
-                showList = self.PluginWalk(upnpID, excludeLST, limit, 'UPNP', 'video')
-            return showList
-        
-        
+                    try:
+                        for i in range(len(DetailLST)):
+                            Detail = (DetailLST[i]).split(',')
+                            filetype = Detail[0]
+                            title = Detail[1]
+                            genre = Detail[2]
+                            dur = Detail[3]
+                            description = Detail[4]
+                            file = Detail[5]
+                                         
+                            if filetype == 'directory':
+                                if Directs[0].lower() == title.lower():
+                                    self.log('BuildUPNPFileList_NEW, Directory Match: ' + Directs[0].lower() + ' = ' + title.lower())
+                                    Directs.pop(0) #remove old directory, search next element
+                                    upnpID = file
+                                    break
+                    except Exception,e:
+                        pass    
+                
+        #all directories found, walk final folder
+        if len(Directs) == 0:
+            showList = self.PluginWalk(upnpID, excludeLST, limit, 'UPNP', 'video')
+        return showList
+    
+    
     # Run rules for a channel
     def runActions(self, action, channel, parameter):
         self.log("runActions " + str(action) + " on channel " + str(channel))
@@ -5396,7 +5353,8 @@ class ChannelList:
         try:
             channels = str(xmltv.read_channels(fle)) 
             print channels
-        except:
+        except Exception,e:
+            self.log('readXMLTV_NEW, XMLTV ERROR = ' + e)
             channels = "[{'display-name': [('XMLTV ERROR', '')], 'id': 'IMPROPER FORMATING'}]"
             pass
         return channels     
@@ -5775,8 +5733,8 @@ class ChannelList:
         for i in range(len(SortedpluginList)):
             self.pluginNameList.append((SortedpluginList[i]).split(',')[0])
             self.pluginPathList.append((SortedpluginList[i]).split(',')[1]) 
-
-            
+    
+    
     def fillFavourites(self):
         self.log('fillFavourites')
         json_query = uni('{"jsonrpc":"2.0","method":"Favourites.GetFavourites","params":{"properties":["path"]},"id":3}')
@@ -5816,15 +5774,14 @@ class ChannelList:
         YoutubePlaylistURL = 'https://pseudotv-live-community.googlecode.com/svn/youtube_playlists.xml'
         YoutubeChannelNetworkURL = 'https://pseudotv-live-community.googlecode.com/svn/youtube_channels_networks.xml'
         YoutubePlaylistNetworkURL = 'https://pseudotv-live-community.googlecode.com/svn/youtube_playlists_networks.xml'
-
+        PlayonURL = 'https://pseudotv-live-community.googlecode.com/svn/playon.xml'
+        
         if list == 'Donor':
             PluginURL = BASEURL + 'addons.ini'
-            UpnpURL = BASEURL + 'playon.ini'
             InternetURL = BASEURL + 'internettv.ini'
             LiveURL = BASEURL + 'livetv.ini'
         else:
             PluginURL = 'https://pseudotv-live-community.googlecode.com/svn/addons.xml'
-            UpnpURL = 'https://pseudotv-live-community.googlecode.com/svn/playon.xml'
             InternetURL = 'https://pseudotv-live-community.googlecode.com/svn/internettv.xml'
             LiveURL = 'https://pseudotv-live-community.googlecode.com/svn/livetv.xml'
         
@@ -5835,18 +5792,23 @@ class ChannelList:
         elif type == 'YouTube':
             if source == 'Channel':
                 url = YoutubeChannelURL
+                id = '1'
             elif source == 'Playlist':
                 url = YoutubePlaylistURL
+                id = '2'
             elif source == 'Multi Playlist':
                 url = YoutubePlaylistNetworkURL
+                id = '7'
             elif source == 'Multi Channel': 
                 url = YoutubeChannelNetworkURL
+                id = '8'
         elif type == 'RSS':
             url = RSSURL
+            id = '1'
         elif type == 'Plugin':
             url = PluginURL
-        elif type == 'UPNP':
-            url = UpnpURL
+        elif type == 'Playon':
+            url = PlayonURL
 
         try:
             data = Open_URL_UP(url, USERPASS)
@@ -5892,6 +5854,9 @@ class ChannelList:
                         if chtype == '15':
                             Pluginvalid = self.plugin_ok(setting_1)
                             channel_name = (((setting_1.split('//')[1]).split('/')[0]).replace('plugin.video.','').replace('plugin.audio.','')).title() + ': ' + genre + ' - ' + channel_name
+                        elif chtype == '16':
+                            Pluginvalid = self.playon_player()
+                            channel_name = (((setting_1.split('//')[1]).split('/')[0]).title()) + ': ' + genre + ' - ' + channel_name
                         elif chtype == '9':
                             if setting_2[0:6] == 'plugin':
                                 Pluginvalid = self.plugin_ok(setting_2)
@@ -5900,8 +5865,11 @@ class ChannelList:
                             channel_name = channel_name + ' - ' + genre
                         elif chtype == '10':
                             Pluginvalid = self.youtube_player()
-                           
+                            channel_name = ((channel_name.title()) + ' - ' + genre)
+
                         if Pluginvalid != False:
+                            if chtype == '10' and len(setting_2) == 0:
+                                setting_2 = id
                             TMPExternalList.append(channel_name+'@#@'+setting_1+'@#@'+setting_2+'@#@'+setting_3+'@#@'+setting_4)
 
                 elif len(line) == 2:
@@ -5911,11 +5879,11 @@ class ChannelList:
                         if setting_1.startswith('http'):
                             Pluginvalid = self.Valid_ok(setting_1)
                             if Pluginvalid != False:
-                                TMPExternalList.append(channel_name+'@#@'+setting_1+'@#@'+''+'@#@'+'25'+'@#@'+'Default')
+                                TMPExternalList.append(channel_name+'@#@'+setting_1+'@#@'+id+'@#@'+'25'+'@#@'+'Default')
                         else:
                             if self.youtube_player() != False:
-                                TMPExternalList.append(channel_name+'@#@'+setting_1+'@#@'+''+'@#@'+'25'+'@#@'+'Default')
-            
+                                TMPExternalList.append(channel_name+'@#@'+setting_1+'@#@'+id+'@#@'+'25'+'@#@'+'Default')
+                                
             SortedExternalList = sorted_nicely(TMPExternalList)
             for n in range(len(SortedExternalList)):
                 if SortedExternalList[n] != None:
@@ -5924,7 +5892,8 @@ class ChannelList:
                     ExternalSetting2List.append((SortedExternalList[n]).split('@#@')[2])
                     ExternalSetting3List.append((SortedExternalList[n]).split('@#@')[3])
                     ExternalSetting4List.append((SortedExternalList[n]).split('@#@')[4])
-        except:
+        except Exception,e:
+            print e
             pass   
             
         if len(TMPExternalList) == 0:
