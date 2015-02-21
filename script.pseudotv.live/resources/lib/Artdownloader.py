@@ -147,7 +147,7 @@ class Artdownloader:
         if REAL_SETTINGS.getSetting('UNAlter_ChanBug') == 'true':
             if not FileAccess.exists(BugFLE):
                 BugFLE = DefaultBug
-            return BugFLE
+                return BugFLE
         else:
             if FileAccess.exists(cachefile):
                 return cachefile
@@ -168,6 +168,7 @@ class Artdownloader:
         
         if FileAccess.exists(LogoFolder):
             setImage = LogoFolder
+        # else:
         #if chtype 0, 9 check chname to fanart.tv for logo match.
         # elif REAL_SETTINGS.getSetting('FindLogos_Enabled') == 'true':
             # file_detail = str(self.logoParser.retrieve_icons_avail())
@@ -303,20 +304,21 @@ class Artdownloader:
                 if FileAccess.exists(cachefile):
                     return cachefile
                 else:
-                    self.logDebug('FindArtwork_NEW, Artwork Download')
-                    setImage = self.DownloadArt(type, id, arttype, cachefile)
+                    if REAL_SETTINGS.getSetting('EnhancedGuideData') == 'true': 
+                        self.logDebug('FindArtwork_NEW, Artwork Download')
+                        setImage = self.DownloadArt(type, id, arttype, cachefile)
+                         
+                        if not FileAccess.exists(setImage):
+                            self.logDebug('FindArtwork_NEW, Artwork Download - Fallback')
+                            setImage = self.DownloadArt(type, id, arttype_fallback, cachefile)
                     
                     if not FileAccess.exists(setImage):
-                        self.logDebug('FindArtwork_NEW, Artwork Download - Fallback')
-                        setImage = self.DownloadArt(type, id, arttype_fallback, cachefile)
+                        self.logDebug('FindArtwork_NEW, Artwork Download - Default')
+                        setImage = self.SetDefaultArt(chname, mpath, arttypeEXT)
                         
-                        if not FileAccess.exists(setImage):
-                            self.logDebug('FindArtwork_NEW, Artwork Download - Default')
-                            setImage = self.SetDefaultArt(chname, mpath, arttypeEXT)
-                    
                     self.log("FindArtwork_NEW, setImage = " + setImage)
                     return setImage
-                
+            
                 
     def SetDefaultArt(self, chname, mpath, arttypeEXT):
         xbmc.log("SetDefaultArt Cache")
@@ -510,3 +512,52 @@ class Artdownloader:
             # else:
                 # self.DownloadThread.start()
             return MovieFilePath
+            
+            
+#logo parser
+class lsHTMLParser(HTMLParser):
+    def __init__(self):
+        HTMLParser.__init__(self)
+        self.icon_rel_url_list=[]
+
+        
+    def handle_starttag(self, tag, attrs):
+        if tag == "img":
+            for pair in attrs:
+                if pair[0]=="src" and pair[1].find("/logo/")!=-1:
+                    self.icon_rel_url_list.append(pair[1])
+                    
+                    
+    def retrieve_icons_avail(self, region='us'):
+        if Cache_Enabled:
+            print ("retrieve_icons_avail Cache")
+            try:
+                result = parsers.cacheFunction(self.retrieve_icons_avail_NEW, region)
+            except:
+                print ("retrieve_icons_avail Cache Failed Forwarding to retrieve_icons_avail_NEW")
+                result = self.retrieve_icons_avail_NEW(region)
+                pass
+        else:
+            print ("retrieve_icons_avail Cache Disabled")
+            result = self.retrieve_icons_avail_NEW(region)
+        if not result:
+            result = 0
+        return result
+         
+            
+    def retrieve_icons_avail_NEW(self, region='us'):
+        print 'retrieve_icons_avail'
+        lyngsat_sub_page="http://www.lyngsat-logo.com/tvcountry/%s_%d.html"
+        results={}
+        URL = 'http://www.lyngsat-logo.com/tvcountry/%s.html' % region
+        opener = urllib.FancyURLopener({})
+        f = opener.open(URL)
+        page_contents=f.read()
+        f.close()
+        parser=lsHTMLParser()
+        parser.feed(page_contents)
+        for icon_rel_url in parser.icon_rel_url_list:
+                icon_abs_url=urlparse.urljoin(lyngsat_sub_page, icon_rel_url)
+                icon_name=os.path.splitext(os.path.basename(icon_abs_url))[0].upper()
+                results[icon_name]=icon_abs_url
+        return results   

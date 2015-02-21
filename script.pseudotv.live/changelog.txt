@@ -1,3 +1,10 @@
+[*] Donor lists (Plugins/InterenetTV) updated.
+[*] Improved automatic settings2 backup and restore?
+[*] EPG Artwork disabled until Art Spooler is finished.
+[*] Trimmed initial autotuning for faster parsing.
+[*] Tweaked Playback failed, Playback timeout timer.
+[*] Changed Eventghost broadcast commands.
+[*] "Enhanced Guide Data" aka "Find Missing Info" tweaked, Faster LiveTV Parsing?
 [*] Playon & Upnp channel building tweaked.
 [*] Pause Playback while browsing "OnDemand" & "Search". Search requires un-pausing playback, OnDemand is automatic.
 [*] Centralized folders when channel sharing (ie. Artwork Cache).

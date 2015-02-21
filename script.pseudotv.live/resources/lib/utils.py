@@ -20,7 +20,7 @@
 import os, re, sys, time, zipfile, threading, requests
 import urllib, urllib2, base64, fileinput, shutil, socket
 import xbmc, xbmcgui, xbmcplugin, xbmcvfs, xbmcaddon
-import urlparse, time, string
+import urlparse, time, string, datetime, ftplib
 
 from Globals import *  
 from FileAccess import FileAccess
@@ -58,6 +58,65 @@ z = '</defaultcontrol>\n    <visible>Window.IsActive(fullscreenvideo) + !Window.
 ###############################
 
 
+def anonFTPDownload(filename, DL_LOC):
+    log('anonFTPDownload, ' + filename + ' - ' + DL_LOC)
+    try:
+        ftp = ftplib.FTP("ftp.pseudotvlive.com", "anonymous@pseudotvlive.com", "anonymous@pseudotvlive.com")
+        ftp.cwd("/ptvl")
+        file = FileAccess.open(DL_LOC, 'w')
+        ftp.retrbinary('RETR %s' % filename, file.write)
+        file.close()
+        ftp.quit()
+    except:
+        pass
+        
+        
+def modification_date(filename):
+    t = os.path.getmtime(filename)
+    return datetime.datetime.fromtimestamp(t)
+
+    
+def getSize(file):
+    if FileAccess.exists(file):
+        fileobject = FileAccess.open(file, "r")
+        fileobject.seek(0,2) # move the cursor to the end of the file
+        size = fileobject.tell()
+        fileobject.close()
+        return size
+    
+           
+def Backup(org, bak):
+    log('Backup ' + str(org) + ' - ' + str(bak))
+    if FileAccess.exists(org):
+        if FileAccess.exists(bak):
+            try:
+                xbmcvfs.delete(bak)
+            except:
+                pass
+        FileAccess.copy(org, bak)
+    
+    if DEBUG == 'true':
+        xbmc.executebuiltin("Notification( %s, %s, %d, %s)" % ("PseudoTV Live", "Backup Complete", 1000, THUMB) )
+        
+            
+def Restore(bak, org):
+    log('Restore ' + str(bak) + ' - ' + str(org))
+    if FileAccess.exists(bak):
+        if FileAccess.exists(org):
+            try:
+                xbmcvfs.delete(org)
+            except:
+                pass
+        FileAccess.rename(bak, org)
+    xbmc.executebuiltin("Notification( %s, %s, %d, %s)" % ("PseudoTV Live", "Restore Complete, Restarting...", 1000, THUMB) )
+
+
+def Error(header, line1= '', line2= '', line3= ''):
+    dlg = xbmcgui.Dialog()
+    dlg.ok(header, line1, line2, line3)
+    del dlg
+    
+    
 def sendGmail(SUBJECT, text):
     log("sendGmail")
     try:
@@ -188,13 +247,12 @@ def VersionCompare():
     for vernum in match:
         log("Current Version = " + str(vernum))
     try:
-        link = Request_URL('https://raw.githubusercontent.com/Lunatixz/XBMC_Addons/master/script.pseudotv.live/addon.xml')               
+        link = Request_URL('https://raw.githubusercontent.com/Lunatixz/XBMC_Addons/master/script.pseudotv.live/addon.xml')  
+        link = link.replace('\r','').replace('\n','').replace('\t','').replace('&nbsp;','')
+        match = re.compile('" version="(.+?)" name="PseudoTV Live"').findall(link)
     except:
-        link='nill'
-    
-    link = link.replace('\r','').replace('\n','').replace('\t','').replace('&nbsp;','')
-    match = re.compile('" version="(.+?)" name="PseudoTV Live"').findall(link)
- 
+        pass   
+        
     if len(match) > 0:
         print vernum, str(match)[0]
         if vernum != str(match[0]):
@@ -404,7 +462,18 @@ def Request_URL(url):
     except:
         pass
            
-    
+           
+def Open_URL_CACHE(url):
+    try:
+        result = daily.cacheFunction(Open_URL, url)
+    except:
+        result = Open_URL(url)
+        pass
+    if not result:
+        result = []
+    return result                 
+                
+                  
 def Open_URL(url):        
     try:
         f = urllib2.urlopen(url)
@@ -505,72 +574,12 @@ def allWithProgress(_in, _out, dp):
         return False
 
     return True
- 
- 
-#logo parser
-class lsHTMLParser(HTMLParser):
-    def __init__(self):
-        HTMLParser.__init__(self)
-        self.icon_rel_url_list=[]
-
-        
-    def handle_starttag(self, tag, attrs):
-        if tag == "img":
-            for pair in attrs:
-                if pair[0]=="src" and pair[1].find("/logo/")!=-1:
-                    self.icon_rel_url_list.append(pair[1])
-                    
-                    
-    def retrieve_icons_avail(self, region='us'):
-        if Cache_Enabled:
-            print ("retrieve_icons_avail Cache")
-            try:
-                result = parsers.cacheFunction(self.retrieve_icons_avail_NEW, region)
-            except:
-                print ("retrieve_icons_avail Cache Failed Forwarding to retrieve_icons_avail_NEW")
-                result = self.retrieve_icons_avail_NEW(region)
-                pass
-        else:
-            print ("retrieve_icons_avail Cache Disabled")
-            result = self.retrieve_icons_avail_NEW(region)
-        if not result:
-            result = 0
-        return result
-         
-            
-    def retrieve_icons_avail_NEW(self, region='us'):
-        print 'retrieve_icons_avail'
-        lyngsat_sub_page="http://www.lyngsat-logo.com/tvcountry/%s_%d.html"
-        results={}
-        URL = 'http://www.lyngsat-logo.com/tvcountry/%s.html' % region
-        opener = urllib.FancyURLopener({})
-        f = opener.open(URL)
-        page_contents=f.read()
-        f.close()
-        parser=lsHTMLParser()
-        parser.feed(page_contents)
-        for icon_rel_url in parser.icon_rel_url_list:
-                icon_abs_url=urlparse.urljoin(lyngsat_sub_page, icon_rel_url)
-                icon_name=os.path.splitext(os.path.basename(icon_abs_url))[0].upper()
-                results[icon_name]=icon_abs_url
-        return results   
-
-
-class FileCache:
-	'''Caches the contents of a set of files.
-	Avoids reading files repeatedly from disk by holding onto the
-	contents of each file as a list of strings.
-	'''
-
-	def __init__(self):
-		self.filecache = {}
-		
-	def grabFile(self, filename):
-		'''Return the contents of a file as a list of strings.
-		New line characters are removed.
-		'''
-		if not self.filecache.has_key(filename):
-			f = open(filename, "r")
-			self.filecache[filename] = string.split(f.read(), '\n')
-			f.close()
-		return self.filecache[filename]
+     
+     
+def copyanything(self, src, dst):
+    try:
+        shutil.copytree(src, dst)
+    except OSError as exc:
+        if exc.errno == errno.ENOTDIR:
+            shutil.copy(src, dst)
+        else: raise

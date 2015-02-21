@@ -30,7 +30,7 @@
         <setting id="SelectAction" type="enum" enable="false" values="Watch Now|Set Reminder|Always Ask" label="30409" default="0" />
         <setting id="HideClips" type="bool" label="30215" default="true"/>
         <setting id="ClipLength" type="enum" subsetting="true" label="30216" visible="eq(-1,true)" values="15|30|60|90|120|180|240|300|360|420|460" default="7"/>
-    	<setting id="MEDIA_LIMIT" label="30310" type="enum" values="25|50|100|250|500|1000|Unlimited" default="1"/>
+    	<setting id="MEDIA_LIMIT" label="30310" type="enum" values="25|50|100|250|500|1000|Unlimited" default="0"/>
         <setting id="reserveChannels" type="bool" label="30372" default="false"/>
     </category>
 <!--Visual-->
@@ -141,7 +141,7 @@
         </category>
 <!--AutoTune Filter-->
     <category label="30700"> 
-        <setting id="PVR_Listing" label="30699" type="enum" values="PVR Backend|xmltv.xml" default="0" />
+        <setting id="PVR_Listing" label="30699" type="enum" values="PVR Backend|xmltvl" default="0" />
         <setting label="30701" type="lsep" default="" /> 
         <setting id="CN_TV" label="30702" type="bool" default="true" />
         <setting id="CN_Movies" label="30703" type="bool" default="true" />
@@ -214,7 +214,7 @@
         <setting id="ATRestore" type="bool" label="30909" default="false"/>
       	<setting id="Warning2" type="bool" label="30069" subsetting="true" visible="eq(-1,true)" default="false"/>
         <setting label="30990" type="lsep"/>
-        <setting id="ActionTimeInt" type="slider" label="30309" default="20" range="10,1,30" option="int" />
+        <setting id="ActionTimeInt" type="slider" label="30309" range="10,5,60" option="int" default="15"/>
         <setting id="enable_Debug" type="bool" label="30993" default="false"/>
         <setting id="Override_ok" type="bool" label="30991" default="true"/>
         <setting id="OS_SET_OVERRIDE" type="bool" label="30981" default="false"/>
@@ -222,7 +222,7 @@
         <setting id="ClearLiveArt" type="bool" label="30996" default="false"/>
         <setting id="ClearCache" type="bool" label="30988" default="false"/>
         <setting id="Cache_Enabled" label="39999" type="bool" default="true" />
-        <setting id="Include3D" type="bool" label="39958" default="false"/>
+        <setting id="Include3D" type="bool" label="39958" default="true"/>
         <setting id="IncludeIceLib" type="bool" label="30997" default="true"/>
         <setting id="IncludeBCTs" type="bool" label="39997" default="true"/>
         <setting id="showNextItem" type="bool" label="39994" visible="false" default="true"/>

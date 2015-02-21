@@ -47,10 +47,17 @@ except:
     pass
 
 def PseudoTV():
-    xbmcgui.Window(10000).setProperty("PseudoTVRunning", "True")
     import resources.lib.Overlay as Overlay
-    
-    MyOverlayWindow = Overlay.TVOverlay("script.pseudotv.live.TVOverlay.xml", __cwd__, Skin_Select)
+
+    try:
+        MyOverlayWindow = Overlay.TVOverlay("script.pseudotv.live.TVOverlay.xml", __cwd__, Skin_Select)
+        xbmcgui.Window(10000).setProperty("PseudoTVRunning", "True")
+    except Exception: 
+        buggalo.addExtraData("Skin_Select = ", str(Skin_Select))
+        buggalo.onExceptionRaised()
+        Error('PseudoTV Live','Error loading "' + Skin_Select + '" skin!','Verify selected skin in settings') 
+        return
+        
     for curthread in threading.enumerate():
         try:
             log("Active Thread: " + str(curthread.name), xbmc.LOGERROR)
@@ -73,12 +80,10 @@ if xbmcgui.Window(10000).getProperty("PseudoTVRunning") != "True":
         PTVL_Version = REAL_SETTINGS.getSetting("PTVL_Version")
     except:
         REAL_SETTINGS.setSetting("PTVL_Version", __version__)
-        PTVL_Version = REAL_SETTINGS.getSetting("PTVL_Version")
-        pass  
+        PTVL_Version = REAL_SETTINGS.getSetting("PTVL_Version") 
     
     if PTVL_Version != __version__:
         ClearPlaylists()
-        REAL_SETTINGS.setSetting('ClearCache', 'true')
         REAL_SETTINGS.setSetting('ForceChannelReset', 'true')
         REAL_SETTINGS.setSetting("PTVL_Version", __version__)
         
@@ -159,6 +164,33 @@ if xbmcgui.Window(10000).getProperty("PseudoTVRunning") != "True":
         else:
             REAL_SETTINGS.setSetting("ArtService_Enabled", "true")
             
+        #Back/Restore Settings2
+        settingsFile = xbmc.translatePath(os.path.join(SETTINGS_LOC, 'settings2.xml'))
+        nsettingsFile = xbmc.translatePath(os.path.join(SETTINGS_LOC, 'settings2.bak.xml'))
+        atsettingsFile = xbmc.translatePath(os.path.join(SETTINGS_LOC, 'settings2.pretune.xml'))
+        
+        try:
+            Normal_Shutdown = REAL_SETTINGS.getSetting('Normal_Shutdown') == "true"
+        except:
+            REAL_SETTINGS.setSetting('Normal_Shutdown', "true")
+            Normal_Shutdown = REAL_SETTINGS.getSetting('Normal_Shutdown') == "true"
+                
+        if REAL_SETTINGS.getSetting("ATRestore") == "true" and REAL_SETTINGS.getSetting("Warning2") == "true":
+            log('Setting2 ATRestore onInit') 
+            if getSize(atsettingsFile) > 100:
+                REAL_SETTINGS.setSetting("ATRestore","false")
+                REAL_SETTINGS.setSetting("Warning2","false")
+                REAL_SETTINGS.setSetting('ForceChannelReset', 'true')
+                Restore(atsettingsFile, settingsFile)   
+        elif Normal_Shutdown == False:
+            log('Setting2 Restore onInit') 
+            if getSize(settingsFile) < 100 and getSize(nsettingsFile) > 100:
+                Restore(nsettingsFile, settingsFile)
+        else:
+            log('Setting2 Backup onInit') 
+            if getSize(settingsFile) > 100:
+                Backup(settingsFile, nsettingsFile)
+
         #Start PseudoTV
         PseudoTV()
 else:

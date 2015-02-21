@@ -77,7 +77,7 @@ ART_TIMER = [6,12,24,48,72]
 SHORT_CLIP_ENUM = [15,30,60,90,120,180,240,300,360,420,460]#in seconds
 INFOBAR_TIMER = [3,5,10,15,20,25]#in seconds
 MEDIA_LIMIT = [25,50,100,250,500,1000,0]#Media Per/Channel, 0 = Unlimited
-REFRESH_INT = [14520,28920,43320,86520]#in seconds (4|8|12|24hrs) + 2min offset
+REFRESH_INT = [14400,28800,43200,86400]#in seconds (4|8|12|24hrs)
 TIMEOUT = 15 * 1000
 TOTAL_FILL_CHANNELS = 20
 PREP_CHANNEL_TIME = 60 * 60 * 24 * 5
@@ -221,29 +221,33 @@ DEBUG = REAL_SETTINGS.getSetting('enable_Debug')
 SETTOP = REAL_SETTINGS.getSetting("EnableSettop") == "true"
 OS_SET = int(REAL_SETTINGS.getSetting("os"))   
 FILTER_3D = ['3d','sbs','fsbs','ftab','hsbs','h.sbs','h-sbs','htab','sbs3d','3dbd','halfsbs','half.sbs','half-sbs','fullsbs','full.sbs','full-sbs','3dsbs','3d.sbs']
-SETTOP_REFRESH = REFRESH_INT[int(REAL_SETTINGS.getSetting('REFRESH_INT'))]  
+
+if REAL_SETTINGS.getSetting('EnableSettop') == 'true': 
+    SETTOP_REFRESH = REFRESH_INT[int(REAL_SETTINGS.getSetting('REFRESH_INT'))] 
+else:
+    SETTOP_REFRESH = 72000
 
 if (OS_SET <= 5 or OS_SET == 10 or OS_SET == 12) and REAL_SETTINGS.getSetting("OS_SET_OVERRIDE") != "true":
     LOWPOWER = True
 else:
     LOWPOWER = False
 
-# Common Cache types, Stacked and sorted for read performance... Todo convert to local db, mysql? 22Hr daily clock
+# Common Cache types, Stacked and sorted for read performance... Todo convert to local db, mysql? 
 #General
 quarterly = StorageServer.StorageServer("plugin://script.pseudotv.live/" + "quarterly",6)                  #System Purge, AutoUpdate
 bidaily = StorageServer.StorageServer("plugin://script.pseudotv.live/" + "bidaily",12)                     #System Purge, AutoUpdate
-daily = StorageServer.StorageServer("plugin://script.pseudotv.live/" + "daily",22)                         #System Purge, AutoUpdate
-weekly = StorageServer.StorageServer("plugin://script.pseudotv.live/" + "weekly",22 * 7)                   #System Purge, AutoUpdate
-seasonal = StorageServer.StorageServer("plugin://script.pseudotv.live/" + "seasonal",((22 * 7) * 3))       #System Purge, AutoUpdate
-monthly = StorageServer.StorageServer("plugin://script.pseudotv.live/" + "monthly",((22 * 7) * 4))         #System Purge, AutoUpdate
+daily = StorageServer.StorageServer("plugin://script.pseudotv.live/" + "daily",24)                         #System Purge, AutoUpdate
+weekly = StorageServer.StorageServer("plugin://script.pseudotv.live/" + "weekly",24 * 7)                   #System Purge, AutoUpdate
+seasonal = StorageServer.StorageServer("plugin://script.pseudotv.live/" + "seasonal",((24 * 7) * 3))       #System Purge, AutoUpdate
+monthly = StorageServer.StorageServer("plugin://script.pseudotv.live/" + "monthly",((24 * 7) * 4))         #System Purge, AutoUpdate
 #FileLists
-localTV = StorageServer.StorageServer("plugin://script.pseudotv.live/" + "localTV",(SETTOP_REFRESH - 2))   #System Purge, AutoUpdate
-liveTV = StorageServer.StorageServer("plugin://script.pseudotv.live/" + "liveTV",22)                       #System Purge, AutoUpdate
-YoutubeTV = StorageServer.StorageServer("plugin://script.pseudotv.live/" + "YoutubeTV",22)                 #System Purge, AutoUpdate
-RSSTV = StorageServer.StorageServer("plugin://script.pseudotv.live/" + "RSSTV",22)                         #System Purge, AutoUpdate
-pluginTV = StorageServer.StorageServer("plugin://script.pseudotv.live/" + "pluginTV",22)                   #System Purge, AutoUpdate
+localTV = StorageServer.StorageServer("plugin://script.pseudotv.live/" + "localTV",(((SETTOP_REFRESH / 60) / 60) - 3600))#ForceReset
+liveTV = StorageServer.StorageServer("plugin://script.pseudotv.live/" + "liveTV",24)                       #System Purge, AutoUpdate
+YoutubeTV = StorageServer.StorageServer("plugin://script.pseudotv.live/" + "YoutubeTV",48)                 #System Purge, AutoUpdate
+RSSTV = StorageServer.StorageServer("plugin://script.pseudotv.live/" + "RSSTV",48)                         #System Purge, AutoUpdate
+pluginTV = StorageServer.StorageServer("plugin://script.pseudotv.live/" + "pluginTV",72)                   #System Purge, AutoUpdate
 upnpTV = StorageServer.StorageServer("plugin://script.pseudotv.live/" + "playonTV",2)                      #System Purge, AutoUpdate
-lastfm = StorageServer.StorageServer("plugin://script.pseudotv.live/" + "lastfm",22)                       #System Purge, AutoUpdate
+lastfm = StorageServer.StorageServer("plugin://script.pseudotv.live/" + "lastfm",48)                       #System Purge, AutoUpdate
 #BCTs
 bumpers = StorageServer.StorageServer("plugin://script.pseudotv.live/" + "bumpers",((24 * 7) * 4))         #BCT Purge
 ratings = StorageServer.StorageServer("plugin://script.pseudotv.live/" + "ratings",((24 * 7) * 4))         #BCT Purge

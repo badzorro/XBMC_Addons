@@ -39,6 +39,12 @@ except:
     Donor_Downloaded = False      
     pass
     
+try:
+    import buggalo
+    buggalo.SUBMIT_URL = 'http://pseudotvlive.com/buggalo-web/submit.php'
+except:
+    pass
+    
 NUMBER_CHANNEL_TYPES = 17
 
 class ConfigWindow(xbmcgui.WindowXMLDialog):
@@ -438,7 +444,7 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
                     title, retval = self.fillSources('InternetTV', self.getControl(224).getLabel())                
                 except:
                     xbmc.executebuiltin("Notification( %s, %s, %d, %s)" % ("PseudoTV Live", "Select Source First", 1000, THUMB) )     
-                    pass
+
             self.getControl(221).setLabel(title)
             self.getControl(227).setLabel(retval)
             try:
@@ -530,7 +536,8 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
                     try:
                         title, genre = Name.split(' - ')
                     except:
-                        pass
+                        title = Name
+                        
                     #Set Channel Name
                     ADDON_SETTINGS.setSetting("Channel_" + str(self.channel) + "_rulecount", "1")
                     ADDON_SETTINGS.setSetting("Channel_" + str(self.channel) + "_rule_1_id", "1")
@@ -596,8 +603,7 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
                 if len(Option2) > 1:
                     self.getControl(283).setLabel(Option2)
                 else:
-                    self.getControl(283).setLabel(' ')
-                    self.getControl(283).setLabel('')
+                    self.getControl(283).reset()
                 ADDON_SETTINGS.setSetting("Channel_" + str(self.channel) + "_rulecount", "1")
                 ADDON_SETTINGS.setSetting("Channel_" + str(self.channel) + "_rule_1_id", "1")
                 ADDON_SETTINGS.setSetting("Channel_" + str(self.channel) + "_rule_1_opt_1", CHname)
@@ -615,8 +621,7 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
                 if len(Option2) > 1:
                     self.getControl(283).setLabel(Option2)
                 else:
-                    self.getControl(283).setLabel(' ')
-                    self.getControl(283).setLabel('')
+                    self.getControl(283).reset()
                 ADDON_SETTINGS.setSetting("Channel_" + str(self.channel) + "_rulecount", "1")
                 ADDON_SETTINGS.setSetting("Channel_" + str(self.channel) + "_rule_1_id", "1")
                 ADDON_SETTINGS.setSetting("Channel_" + str(self.channel) + "_rule_1_opt_1", CHname)
@@ -767,7 +772,6 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
         elif controlId == 295:    # UPNP SortOrder, select 
             select = selectDialog(self.SortOrderList, 'Select Sorting Order')
             self.getControl(295).setLabel(self.SortOrderList[select]) 
-            
         self.log("onClick return")
 
 
@@ -786,15 +790,11 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
             if item == curval:
                 found = True
                 break
-
             index += 1
-
         if found == True:
             index += val
-
         while index < 0:
             index += len(thelist)
-
         while index >= len(thelist):
             index -= len(thelist)
 
@@ -1052,7 +1052,6 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
 
         if len(thelist) > 0:
             return thelist[0]
-
         return ''    
         
         
@@ -1063,7 +1062,6 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
             line = (thelist[i]).lower()
             if line == loitem:
                 return i
-
         return ''
 
 
@@ -1223,21 +1221,24 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
                 return PluginNameLst, PluginPathLst
         except:
             xbmc.executebuiltin( "Dialog.Close(busydialog)" )
-            pass
+            buggalo.onExceptionRaised() 
              
             
     def clearLabel(self, id=None):
         if id:
-            self.getControl(id).setLabel(' ')
-            self.getControl(id).setLabel('')
+            
+            self.getControl(id).reset()
+            # self.getControl(id).setLabel(' ')
+            # self.getControl(id).setLabel('')
         else:
             for i in range(NUMBER_CHANNEL_TYPES):
                 if i >= 7:
                     base = (120 + ((i + 1) * 10))
                     for n in range(10):
                         try:
-                            self.getControl(base + n).setLabel(' ')
-                            self.getControl(base + n).setLabel('')   
+                            self.getControl(base + n).reset()
+                            # self.getControl(base + n).setLabel(' ')
+                            # self.getControl(base + n).setLabel('')   
                         except:
                             break
                             
@@ -1342,9 +1343,14 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
                     self.log("Community List, LiveTV")
                     NameLst, Option1LST, PathLst, Option3LST, Option4LST = chnlst.fillExternalList('LiveTV')
                     select = selectDialog(NameLst, 'Select LiveTV')
+                    try:
+                        source, title = NameLst[select].split(' - ')
+                    except:
+                        title = NameLst[select]
+
                     self.getControl(216).setLabel(Option1LST[select])
                     self.getControl(212).setLabel(Option3LST[select])
-                    self.getControl(213).setLabel(NameLst[select])
+                    self.getControl(213).setLabel(title)
                     return NameLst[select], PathLst[select]
                 elif type == 'InternetTV':
                     self.log("Community List, InternetTV")
@@ -1428,7 +1434,7 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
                 return  
         except:
             xbmc.executebuiltin( "Dialog.Close(busydialog)" )
-            pass
+            buggalo.onExceptionRaised() 
             
             
     def help(self):

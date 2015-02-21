@@ -48,7 +48,7 @@
                 <label>Channel</label>
             </control>
             <control type="label">
-                <left>690</left>                
+                <left>680</left>                
                 <top>0</top>
                 <width>100</width>
                 <height>35</height>

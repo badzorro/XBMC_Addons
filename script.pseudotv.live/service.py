@@ -68,14 +68,14 @@ def donorCHK():
         REAL_SETTINGS.setSetting("COM_Donor", "true")
         REAL_SETTINGS.setSetting("TRL_Donor", "true")
         REAL_SETTINGS.setSetting("CAT_Donor", "true")
-        REAL_SETTINGS.setSetting("autoFindCommunity_Source", "1")
+        # REAL_SETTINGS.setSetting("autoFindCommunity_Source", "1")
     else:
         xbmc.log('script.pseudotv.live-Service: donorCHK = FreeUser')  
         REAL_SETTINGS.setSetting("AT_Donor", "false")
         REAL_SETTINGS.setSetting("COM_Donor", "false")
         REAL_SETTINGS.setSetting("TRL_Donor", "false")
         REAL_SETTINGS.setSetting("CAT_Donor", "false")
-        REAL_SETTINGS.setSetting("autoFindCommunity_Source", "0")
+        # REAL_SETTINGS.setSetting("autoFindCommunity_Source", "0")
     
         
 def service():
@@ -86,9 +86,15 @@ def service():
             if xbmcgui.Window(10000).getProperty("PseudoTVRunning") != "True":
                 xbmcgui.Window(10000).setProperty("PseudoTVRunning", "True")
                 xbmc.log('script.pseudotv.live-Service: Running')
+                donorCHK()
                 HubSwap()
                 xbmcgui.Window(10000).setProperty("PseudoTVRunning", "False")
-                xbmc.log('script.pseudotv.live-Service: Idle')
+                
+                #Autostart Trigger
+                if REAL_SETTINGS.getSetting("Auto_Start") == "true": 
+                    autostart() 
+                    
+            xbmc.log('script.pseudotv.live-Service: Idle')
             xbmc.sleep(100000)
     except:
         pass
@@ -101,12 +107,5 @@ def autostart():
     IDLE_TIME = AUTOSTART_TIMER[int(REAL_SETTINGS.getSetting('timer_amount'))] 
     sleep(IDLE_TIME)
     xbmc.executebuiltin('RunScript("' + ADDON_PATH + '/default.py' + '")')
-  
-  
-donorCHK()
+   
 service()
-
-#Autostart Trigger
-if REAL_SETTINGS.getSetting("Auto_Start") == "true": 
-    autostart() 
-    
